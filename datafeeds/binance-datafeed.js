@@ -2,6 +2,7 @@ class BinanceDatafeed {
     constructor() {
         this.binanceApiBase = 'https://api.binance.com/api/v3';
         this.savedBars = []; // Хранение данных свечей для возможных изменений
+        this.subscribers = {}; // Хранение подписчиков для реального времени
         this.isModified = false; // Флаг для проверки изменения данных
     }
 
@@ -95,12 +96,34 @@ class BinanceDatafeed {
             });
     }
 
+    // Подписка на обновления в реальном времени
+    subscribeBars(symbolInfo, resolution, onRealtimeCallback, subscribeUID, onResetCacheNeededCallback) {
+        this.subscribers[subscribeUID] = onRealtimeCallback;
+
+        // Вызываем последнюю свечу при подписке, если есть
+        if (this.savedBars.length > 0) {
+            const lastCandle = this.savedBars[this.savedBars.length - 1];
+            onRealtimeCallback(lastCandle);
+        }
+    }
+
+    // Отписка от обновлений
+    unsubscribeBars(subscriberUID) {
+        delete this.subscribers[subscriberUID];
+    }
+
+    // Функция для изменения последней свечи
     modifyLastCandle(priceChange) {
         if (this.savedBars.length > 0) {
             const lastCandle = this.savedBars[this.savedBars.length - 1];
             lastCandle.close += priceChange;
             lastCandle.high += priceChange;
             this.isModified = true; // Устанавливаем флаг изменения
+
+            // Уведомляем подписчиков о новом значении свечи
+            Object.values(this.subscribers).forEach(callback => {
+                callback(lastCandle);
+            });
         }
     }
 
