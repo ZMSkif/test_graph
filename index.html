@@ -35,17 +35,18 @@
   </div>
 
   <script type="text/javascript">
+    let widget;
     let datafeed = new BinanceDatafeed(); // Инициализируем кастомный datafeed
 
     // Функция для увеличения последней свечи на $100
     function increaseCandle() {
       datafeed.modifyLastCandle(100);  // Поднимаем последнюю свечу
-      drawChart();  // Обновляем график
+      widget.update();  // Обновляем график
     }
 
     // Функция для отрисовки графика
     function drawChart() {
-      new TradingView.widget({
+      widget = new TradingView.widget({
         symbol: 'BTCUSDT',
         interval: '15',
         container_id: 'tv_chart_container',
@@ -61,7 +62,7 @@
 
     // Обновляем график при нажатии на кнопку "Обновить"
     function resetChart() {
-      drawChart();
+      drawChart();  // Перерисовываем график с реальными данными
     }
 
     // Инициализация графика при загрузке страницы
