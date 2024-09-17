@@ -14,10 +14,10 @@
       height: 600px;
     }
 
-    /* Стили для кнопок управления */
     .controls {
       margin-top: 20px;
     }
+
     .controls button {
       padding: 10px 20px;
       margin-right: 10px;
@@ -28,126 +28,45 @@
 
 <body>
   <div id="tv_chart_container"></div>
-
+  
   <div class="controls">
     <button onclick="increaseCandle()">Поднять последнюю свечу на $100</button>
-    <button onclick="resetCandle()">Сбросить к реальной цене</button>
+    <button onclick="resetChart()">Обновить график</button>
   </div>
 
   <script type="text/javascript">
-    let widget;  // Объект виджета TradingView
-    const LOCAL_STORAGE_KEY = 'tradingview_data';  // Ключ для хранения данных в localStorage
+    let datafeed = new BinanceDatafeed(); // Инициализируем кастомный datafeed
 
-    // Функция для сохранения данных в localStorage как JSON
-    function saveDataToLocalStorage(data) {
-      localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(data));
-    }
-
-    // Функция для получения данных из localStorage
-    function getDataFromLocalStorage() {
-      const data = localStorage.getItem(LOCAL_STORAGE_KEY);
-      return data ? JSON.parse(data) : [];
-    }
-
-    // Функция для получения данных с Binance
-    async function fetchBinanceData(symbol, interval) {
-      const response = await fetch(`https://api.binance.com/api/v3/klines?symbol=${symbol}&interval=${interval}&limit=100`);
-      const data = await response.json();
-      const formattedData = data.map(candle => ({
-        time: candle[0],
-        open: parseFloat(candle[1]),
-        high: parseFloat(candle[2]),
-        low: parseFloat(candle[3]),
-        close: parseFloat(candle[4]),
-        volume: parseFloat(candle[5]),
-      }));
-
-      // Сохраняем полученные данные в localStorage
-      saveDataToLocalStorage(formattedData);
-      return formattedData;
-    }
-
-    // Функция для изменения последней свечи
+    // Функция для увеличения последней свечи на $100
     function increaseCandle() {
-      let data = getDataFromLocalStorage();
-      if (data.length === 0) return;
-
-      // Изменяем последнюю свечу: поднимаем цену закрытия и high на $100
-      const lastCandle = data[data.length - 1];
-      lastCandle.close += 100;
-      lastCandle.high += 100;
-
-      // Сохраняем изменённые данные
-      saveDataToLocalStorage(data);
-
-      // Рисуем измененный график
-      drawChart(data);
+      datafeed.modifyLastCandle(100);  // Поднимаем последнюю свечу
+      drawChart();  // Обновляем график
     }
 
-    // Функция для возврата графика к реальной цене
-    function resetCandle() {
-      let data = getDataFromLocalStorage();
-      if (data.length === 0) return;
-
-      // Читаем реальные данные из localStorage
-      drawChart(data);
-    }
-
-    // Функция для отрисовки графика с использованием TradingView
-    function drawChart(data) {
-      if (widget) {
-        widget.remove();
-      }
-
-      widget = new TradingView.widget({
-        symbol: 'BTCUSDT',  // Стартовый символ для отображения
-        interval: '15',  // Интервал времени
-        container_id: 'tv_chart_container',  // Контейнер для графика
-        datafeed: {
-          onReady: (callback) => callback({ supported_resolutions: ["1", "5", "15", "30", "60", "240", "D"] }),
-          resolveSymbol: (symbolName, onSymbolResolvedCallback) => {
-            onSymbolResolvedCallback({
-              name: symbolName,
-              description: 'Binance Data',
-              type: 'crypto',
-              session: '24x7',
-              timezone: 'Etc/UTC',
-              ticker: symbolName,
-              minmov: 1,
-              pricescale: 100,
-              has_intraday: true,
-              supported_resolutions: ["1", "5", "15", "30", "60", "240", "D"],
-              volume_precision: 8,
-              data_status: 'streaming',
-            });
-          },
-          getBars: (symbolInfo, resolution, from, to, onHistoryCallback) => {
-            onHistoryCallback(data, { noData: false });
-          },
-          subscribeBars: (symbolInfo, resolution, onRealtimeCallback) => {},
-          unsubscribeBars: (subscriberUID) => {},
-        },
-        library_path: '/charting_library/',  // Локальный путь к библиотеке TradingView
-        locale: 'en',  // Локализация
-        disabled_features: ['use_localstorage_for_settings'],  // Отключаем использование локального хранилища
-        enabled_features: ['study_templates'],  // Включаем нужные функции
-        fullscreen: false,  // Отключаем полноэкранный режим
-        autosize: true,  // Автоматический размер контейнера
+    // Функция для отрисовки графика
+    function drawChart() {
+      new TradingView.widget({
+        symbol: 'BTCUSDT',
+        interval: '15',
+        container_id: 'tv_chart_container',
+        datafeed: datafeed,
+        library_path: '/charting_library/',
+        locale: 'en',
+        disabled_features: ['use_localstorage_for_settings'],
+        enabled_features: ['study_templates'],
+        fullscreen: false,
+        autosize: true,
       });
     }
 
-    // Инициализация данных и графика
-    document.addEventListener('DOMContentLoaded', async function() {
-      // Попробуем получить данные из localStorage
-      let data = getDataFromLocalStorage();
+    // Обновляем график при нажатии на кнопку "Обновить"
+    function resetChart() {
+      drawChart();
+    }
 
-      // Если данных нет в localStorage, загружаем с Binance
-      if (data.length === 0) {
-        data = await fetchBinanceData('BTCUSDT', '15m');
-      }
-
-      // Рисуем график
-      drawChart(data);
+    // Инициализация графика при загрузке страницы
+    document.addEventListener('DOMContentLoaded', function() {
+      drawChart();
     });
   </script>
 </body>
