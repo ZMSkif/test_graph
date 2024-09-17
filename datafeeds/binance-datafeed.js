@@ -61,12 +61,6 @@ class BinanceDatafeed {
     }
 
     getBars(symbolInfo, resolution, periodParams, onHistoryCallback, onErrorCallback) {
-        if (this.isModified) {
-            // Возвращаем изменённые данные
-            onHistoryCallback(this.savedBars, { noData: false });
-            return;
-        }
-
         const { from, to } = periodParams;
         const interval = this._getInterval(resolution);
         const url = `${this.binanceApiBase}/klines?symbol=${symbolInfo.name}&interval=${interval}&startTime=${from * 1000}&endTime=${to * 1000}&limit=1000`;
@@ -86,7 +80,7 @@ class BinanceDatafeed {
                         volume: parseFloat(bar[5])
                     }));
 
-                    this.savedBars = bars; // Сохраняем данные
+                    this.savedBars = bars; // Сохраняем данные для дальнейших изменений
                     onHistoryCallback(bars, { noData: false });
                 }
             })
@@ -105,6 +99,21 @@ class BinanceDatafeed {
             const lastCandle = this.savedBars[this.savedBars.length - 1];
             onRealtimeCallback(lastCandle);
         }
+
+        // Реальные обновления данных через 10 секунд (пример симуляции)
+        setInterval(() => {
+            if (this.savedBars.length > 0 && !this.isModified) {
+                const lastCandle = this.savedBars[this.savedBars.length - 1];
+                lastCandle.close += (Math.random() * 2 - 1); // Случайное изменение цены
+                lastCandle.high = Math.max(lastCandle.high, lastCandle.close); // Обновляем high
+                lastCandle.low = Math.min(lastCandle.low, lastCandle.close); // Обновляем low
+
+                // Уведомляем подписчиков о новом значении свечи
+                Object.values(this.subscribers).forEach(callback => {
+                    callback(lastCandle);
+                });
+            }
+        }, 10000);
     }
 
     // Отписка от обновлений
@@ -117,14 +126,20 @@ class BinanceDatafeed {
         if (this.savedBars.length > 0) {
             const lastCandle = this.savedBars[this.savedBars.length - 1];
             lastCandle.close += priceChange;
-            lastCandle.high += priceChange;
-            this.isModified = true; // Устанавливаем флаг изменения
+            lastCandle.high = Math.max(lastCandle.high, lastCandle.close); // Обновляем high
+            lastCandle.low = Math.min(lastCandle.low, lastCandle.close);  // Обновляем low
+            this.isModified = true; // Флаг изменения
 
             // Уведомляем подписчиков о новом значении свечи
             Object.values(this.subscribers).forEach(callback => {
                 callback(lastCandle);
             });
         }
+    }
+
+    // Функция для возврата к реальным данным
+    resetToRealTime() {
+        this.isModified = false; // Сбрасываем флаг изменения
     }
 
     _getInterval(resolution) {
