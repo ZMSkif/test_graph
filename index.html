@@ -17,10 +17,16 @@
 
 <body>
   <div id="tv_chart_container"></div>
+  
+  <!-- Кнопки управления свечами -->
+  <button onclick="increaseCandle()">Поднять последнюю свечу на $100</button>
+  <button onclick="resetCandle()">Сбросить к реальной цене</button>
 
   <script type="text/javascript">
-    let realData = [];  // Массив для хранения реальных данных
+    let realData = [];  // Массив для хранения реальных данных с Binance
     let modifiedData = [];  // Массив для изменения данных
+    let widget;  // Объект виджета TradingView
+    let isModified = false;  // Флаг, чтобы отслеживать, изменена ли последняя свеча
 
     // Функция для получения данных с Binance
     async function fetchBinanceData(symbol, interval) {
@@ -36,29 +42,41 @@
       }));
     }
 
-    // Функция для управления свечами
-    function modifyCandle(candleIndex, priceChange, duration = 10000) {
-      // Копируем текущие данные
+    // Функция для изменения последней свечи
+    function increaseCandle() {
+      if (realData.length === 0) return;
+      
+      // Копируем реальную последнюю свечу
       modifiedData = [...realData];
       
-      // Изменяем свечу
-      modifiedData[candleIndex].close += priceChange;
-      modifiedData[candleIndex].high += priceChange;
+      // Изменяем последнюю свечу: поднимаем цену закрытия и high на $100
+      const lastCandle = modifiedData[modifiedData.length - 1];
+      lastCandle.close += 100;
+      lastCandle.high += 100;
 
-      // Рисуем измененную свечу
+      isModified = true;
+
+      // Рисуем измененный график
       drawChart(modifiedData);
+    }
 
-      // Возвращаемся к реальной цене через duration (10 секунд по умолчанию)
-      setTimeout(() => {
-        drawChart(realData);  // Возвращаем реальную свечу
-      }, duration);
+    // Функция для возврата графика к реальной цене
+    function resetCandle() {
+      if (isModified) {
+        drawChart(realData);
+        isModified = false;
+      }
     }
 
     // Функция для отрисовки графика с использованием TradingView
     function drawChart(data) {
-      const widget = new TradingView.widget({
+      if (widget) {
+        widget.remove();
+      }
+
+      widget = new TradingView.widget({
         symbol: 'BTCUSDT',
-        interval: '15',
+        interval: '1',  // Интервал 1 минута
         container_id: 'tv_chart_container',
         datafeed: {
           onReady: (callback) => callback({ supported_resolutions: ["1", "5", "15", "30", "60", "240", "D"] }),
@@ -100,11 +118,6 @@
       
       // Рисуем реальный график
       drawChart(realData);
-
-      // Пример изменения свечи на $100
-      setTimeout(() => {
-        modifyCandle(99, 100);  // Изменяем последнюю свечу на +$100 на 10 секунд
-      }, 5000);  // Изменение через 5 секунд после загрузки
     });
   </script>
 </body>
