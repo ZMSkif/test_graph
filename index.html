@@ -35,16 +35,25 @@
   </div>
 
   <script type="text/javascript">
-    let realData = [];  // Массив для хранения реальных данных с Binance
-    let modifiedData = [];  // Массив для изменения данных
     let widget;  // Объект виджета TradingView
-    let isModified = false;  // Флаг, чтобы отслеживать, изменена ли последняя свеча
+    const LOCAL_STORAGE_KEY = 'tradingview_data';  // Ключ для хранения данных в localStorage
+
+    // Функция для сохранения данных в localStorage как JSON
+    function saveDataToLocalStorage(data) {
+      localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(data));
+    }
+
+    // Функция для получения данных из localStorage
+    function getDataFromLocalStorage() {
+      const data = localStorage.getItem(LOCAL_STORAGE_KEY);
+      return data ? JSON.parse(data) : [];
+    }
 
     // Функция для получения данных с Binance
     async function fetchBinanceData(symbol, interval) {
       const response = await fetch(`https://api.binance.com/api/v3/klines?symbol=${symbol}&interval=${interval}&limit=100`);
       const data = await response.json();
-      return data.map(candle => ({
+      const formattedData = data.map(candle => ({
         time: candle[0],
         open: parseFloat(candle[1]),
         high: parseFloat(candle[2]),
@@ -52,38 +61,44 @@
         close: parseFloat(candle[4]),
         volume: parseFloat(candle[5]),
       }));
+
+      // Сохраняем полученные данные в localStorage
+      saveDataToLocalStorage(formattedData);
+      return formattedData;
     }
 
     // Функция для изменения последней свечи
     function increaseCandle() {
-      if (realData.length === 0) return;
-
-      // Копируем реальные данные
-      modifiedData = [...realData];
+      let data = getDataFromLocalStorage();
+      if (data.length === 0) return;
 
       // Изменяем последнюю свечу: поднимаем цену закрытия и high на $100
-      const lastCandle = modifiedData[modifiedData.length - 1];
+      const lastCandle = data[data.length - 1];
       lastCandle.close += 100;
       lastCandle.high += 100;
 
-      isModified = true;
+      // Сохраняем изменённые данные
+      saveDataToLocalStorage(data);
 
       // Рисуем измененный график
-      widget.update();
-      drawChart(modifiedData);
+      drawChart(data);
     }
 
     // Функция для возврата графика к реальной цене
     function resetCandle() {
-      if (isModified) {
-        widget.update();
-        drawChart(realData);
-        isModified = false;
-      }
+      let data = getDataFromLocalStorage();
+      if (data.length === 0) return;
+
+      // Читаем реальные данные из localStorage
+      drawChart(data);
     }
 
     // Функция для отрисовки графика с использованием TradingView
     function drawChart(data) {
+      if (widget) {
+        widget.remove();
+      }
+
       widget = new TradingView.widget({
         symbol: 'BTCUSDT',  // Стартовый символ для отображения
         interval: '15',  // Интервал времени
@@ -123,11 +138,16 @@
 
     // Инициализация данных и графика
     document.addEventListener('DOMContentLoaded', async function() {
-      // Получаем реальные данные с Binance
-      realData = await fetchBinanceData('BTCUSDT', '15m');
+      // Попробуем получить данные из localStorage
+      let data = getDataFromLocalStorage();
+
+      // Если данных нет в localStorage, загружаем с Binance
+      if (data.length === 0) {
+        data = await fetchBinanceData('BTCUSDT', '15m');
+      }
 
       // Рисуем график
-      drawChart(realData);
+      drawChart(data);
     });
   </script>
 </body>
