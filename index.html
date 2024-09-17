@@ -1,27 +1,40 @@
 <!DOCTYPE HTML>
 <html>
 <head>
-	<title>TradingView Binance Charts</title>
-	<meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0,minimum-scale=1.0">
+  <title>TradingView with Binance Datafeed</title>
+  <meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0,minimum-scale=1.0">
 
-	<!-- TradingView charting library -->
-	<script type="text/javascript" src="/charting_library/charting_library.standalone.js"></script>
-	<script type="text/javascript" src="/datafeeds/binance-datafeed.js"></script>
+  <!-- Подключаем локальные файлы библиотеки TradingView -->
+  <script type="text/javascript" src="/charting_library/charting_library.standalone.js"></script>
+  <script type="text/javascript" src="/datafeeds/binance-datafeed.js"></script>
 
-	<!-- Добавляем стили для контейнера графика -->
-	<style>
-		#tv_chart_container {
-			width: 100%;
-			height: 600px;
-		}
-	</style>
-
-
-
+  <style>
+    #tv_chart_container {
+      width: 100%;
+      height: 600px;
+    }
+  </style>
 </head>
 
-<body style="margin:0px;">
-	<!-- Контейнер для графика -->
-	<div id="tv_chart_container"></div>
+<body>
+  <div id="tv_chart_container"></div>
+
+  <script type="text/javascript">
+    // Инициализация виджета TradingView с использованием локального datafeed
+    document.addEventListener('DOMContentLoaded', function() {
+        const widget = new TradingView.widget({
+            symbol: 'BTCUSDT',  // Символ для отображения
+            interval: '15',  // Интервал времени
+            container_id: 'tv_chart_container',  // Контейнер для графика
+            datafeed: new BinanceDatafeed(),  // Локальный datafeed для получения данных с Binance
+            library_path: '/charting_library/',  // Локальный путь к библиотеке TradingView
+            locale: 'en',  // Локализация
+            disabled_features: ['use_localstorage_for_settings'],  // Отключаем использование локального хранилища
+            enabled_features: ['study_templates'],  // Включаем нужные функции
+            fullscreen: false,  // Отключаем полноэкранный режим
+            autosize: true,  // Автоматический размер контейнера
+        });
+    });
+  </script>
 </body>
 </html>
