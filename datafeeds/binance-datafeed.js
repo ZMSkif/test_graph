@@ -4,6 +4,7 @@ class BinanceDatafeed {
         this.savedBars = []; // Хранение данных свечей для возможных изменений
         this.subscribers = {}; // Хранение подписчиков для реального времени
         this.isModified = false; // Флаг для проверки изменения данных
+        this.realTimeInterval = null; // Интервал для обновления в реальном времени
     }
 
     onReady(callback) {
@@ -100,8 +101,8 @@ class BinanceDatafeed {
             onRealtimeCallback(lastCandle);
         }
 
-        // Реальные обновления данных через 10 секунд (пример симуляции)
-        setInterval(() => {
+        // Реальные обновления данных каждые 5 секунд
+        this.realTimeInterval = setInterval(() => {
             if (this.savedBars.length > 0 && !this.isModified) {
                 const lastCandle = this.savedBars[this.savedBars.length - 1];
                 lastCandle.close += (Math.random() * 2 - 1); // Случайное изменение цены
@@ -113,12 +114,13 @@ class BinanceDatafeed {
                     callback(lastCandle);
                 });
             }
-        }, 10000);
+        }, 5000);
     }
 
     // Отписка от обновлений
     unsubscribeBars(subscriberUID) {
         delete this.subscribers[subscriberUID];
+        clearInterval(this.realTimeInterval); // Останавливаем интервал реального времени
     }
 
     // Функция для изменения последней свечи
