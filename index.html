@@ -1,7 +1,7 @@
 <!DOCTYPE HTML>
 <html>
 <head>
-  <title>TradingView with Binance Datafeed</title>
+  <title>TradingView with Dynamic Binance Data</title>
   <meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0,minimum-scale=1.0">
 
   <!-- Подключаем локальные файлы библиотеки TradingView -->
@@ -20,10 +20,10 @@
   <div id="tv_chart_container"></div>
 
   <script type="text/javascript">
-    // Инициализация виджета TradingView с использованием локального datafeed
+    // Инициализация виджета TradingView с использованием локального datafeed и динамических данных
     document.addEventListener('DOMContentLoaded', function() {
         const widget = new TradingView.widget({
-            symbol: 'BTCUSDT',  // Символ для отображения
+            symbol: 'BTCUSDT',  // Стартовый символ для отображения
             interval: '15',  // Интервал времени
             container_id: 'tv_chart_container',  // Контейнер для графика
             datafeed: new BinanceDatafeed(),  // Локальный datafeed для получения данных с Binance
