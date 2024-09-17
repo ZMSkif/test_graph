@@ -3,13 +3,14 @@ class BinanceDatafeed {
         this.binanceApiBase = 'https://api.binance.com/api/v3';
     }
 
+    // TradingView вызовет этот метод для инициализации списка символов
     onReady(callback) {
         setTimeout(() => callback({
             supported_resolutions: ["1", "3", "5", "15", "30", "60", "120", "240", "360", "480", "720", "D", "W", "M"]
-        }));
+        }), 0);
     }
 
-    // Получаем список символов с Binance
+    // Получаем список всех доступных символов с Binance
     searchSymbols(userInput, exchange, symbolType, onResultReadyCallback) {
         fetch(`${this.binanceApiBase}/exchangeInfo`)
             .then(response => response.json())
@@ -27,7 +28,7 @@ class BinanceDatafeed {
             .catch(error => console.error('Error fetching symbols:', error));
     }
 
-    // Получаем данные по конкретному символу
+    // Устанавливаем данные для конкретного символа
     resolveSymbol(symbolName, onSymbolResolvedCallback, onResolveErrorCallback) {
         fetch(`${this.binanceApiBase}/exchangeInfo?symbol=${symbolName}`)
             .then(response => response.json())
@@ -47,7 +48,7 @@ class BinanceDatafeed {
                     ticker: symbolInfo.symbol,
                     exchange: 'Binance',
                     minmov: 1,
-                    pricescale: 100,
+                    pricescale: 100000000, // Масштаб цен для криптовалют
                     has_intraday: true,
                     intraday_multipliers: ['1', '3', '5', '15', '30', '60', '120', '240', '360', '480', '720'],
                     supported_resolutions: ["1", "3", "5", "15", "30", "60", "120", "240", "360", "480", "720", "D", "W", "M"],
@@ -55,9 +56,12 @@ class BinanceDatafeed {
                     data_status: 'streaming',
                 });
             })
-            .catch(error => onResolveErrorCallback('Error resolving symbol: ' + error.message));
+            .catch(error => {
+                onResolveErrorCallback('Error resolving symbol: ' + error.message);
+            });
     }
 
+    // Получаем данные свечей для отображения на графике
     getBars(symbolInfo, resolution, periodParams, onHistoryCallback, onErrorCallback) {
         const { from, to } = periodParams;
         const interval = this._getInterval(resolution);
@@ -90,6 +94,6 @@ class BinanceDatafeed {
         if (resolution.includes('D')) return '1d';
         if (resolution.includes('W')) return '1w';
         if (resolution.includes('M')) return '1M';
-        return resolution;
+        return resolution + 'm';  // Интервалы в минутах
     }
 }
