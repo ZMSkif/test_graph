@@ -1,6 +1,7 @@
 class BinanceDatafeed {
     constructor() {
         this.binanceApiBase = 'https://api.binance.com/api/v3';
+        this.savedBars = []; // Хранение данных свечей для возможных изменений
     }
 
     // TradingView вызовет этот метод для инициализации списка символов
@@ -73,6 +74,7 @@ class BinanceDatafeed {
                 if (data.length === 0) {
                     onHistoryCallback([], { noData: true });
                 } else {
+                    // Преобразуем данные с Binance в формат TradingView
                     const bars = data.map(bar => ({
                         time: bar[0],
                         open: parseFloat(bar[1]),
@@ -81,6 +83,10 @@ class BinanceDatafeed {
                         close: parseFloat(bar[4]),
                         volume: parseFloat(bar[5])
                     }));
+
+                    // Сохраняем данные для возможных изменений
+                    this.savedBars = bars;
+
                     onHistoryCallback(bars, { noData: false });
                 }
             })
@@ -88,6 +94,15 @@ class BinanceDatafeed {
                 console.error(`Error fetching bars: ${error}`);
                 onErrorCallback(error);
             });
+    }
+
+    // Функция для изменения последней свечи
+    modifyLastCandle(priceChange) {
+        if (this.savedBars.length > 0) {
+            const lastCandle = this.savedBars[this.savedBars.length - 1];
+            lastCandle.close += priceChange;
+            lastCandle.high += priceChange;
+        }
     }
 
     _getInterval(resolution) {
