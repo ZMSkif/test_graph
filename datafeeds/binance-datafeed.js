@@ -2,16 +2,15 @@ class BinanceDatafeed {
     constructor() {
         this.binanceApiBase = 'https://api.binance.com/api/v3';
         this.savedBars = []; // Хранение данных свечей для возможных изменений
+        this.isModified = false; // Флаг для проверки изменения данных
     }
 
-    // TradingView вызовет этот метод для инициализации списка символов
     onReady(callback) {
         setTimeout(() => callback({
             supported_resolutions: ["1", "3", "5", "15", "30", "60", "120", "240", "360", "480", "720", "D", "W", "M"]
         }), 0);
     }
 
-    // Получаем список всех доступных символов с Binance
     searchSymbols(userInput, exchange, symbolType, onResultReadyCallback) {
         fetch(`${this.binanceApiBase}/exchangeInfo`)
             .then(response => response.json())
@@ -29,7 +28,6 @@ class BinanceDatafeed {
             .catch(error => console.error('Error fetching symbols:', error));
     }
 
-    // Устанавливаем данные для конкретного символа
     resolveSymbol(symbolName, onSymbolResolvedCallback, onResolveErrorCallback) {
         fetch(`${this.binanceApiBase}/exchangeInfo?symbol=${symbolName}`)
             .then(response => response.json())
@@ -49,9 +47,8 @@ class BinanceDatafeed {
                     ticker: symbolInfo.symbol,
                     exchange: 'Binance',
                     minmov: 1,
-                    pricescale: 100000000, // Масштаб цен для криптовалют
+                    pricescale: 100000000,
                     has_intraday: true,
-                    intraday_multipliers: ['1', '3', '5', '15', '30', '60', '120', '240', '360', '480', '720'],
                     supported_resolutions: ["1", "3", "5", "15", "30", "60", "120", "240", "360", "480", "720", "D", "W", "M"],
                     volume_precision: 8,
                     data_status: 'streaming',
@@ -62,8 +59,13 @@ class BinanceDatafeed {
             });
     }
 
-    // Получаем данные свечей для отображения на графике
     getBars(symbolInfo, resolution, periodParams, onHistoryCallback, onErrorCallback) {
+        if (this.isModified) {
+            // Возвращаем изменённые данные
+            onHistoryCallback(this.savedBars, { noData: false });
+            return;
+        }
+
         const { from, to } = periodParams;
         const interval = this._getInterval(resolution);
         const url = `${this.binanceApiBase}/klines?symbol=${symbolInfo.name}&interval=${interval}&startTime=${from * 1000}&endTime=${to * 1000}&limit=1000`;
@@ -74,7 +76,6 @@ class BinanceDatafeed {
                 if (data.length === 0) {
                     onHistoryCallback([], { noData: true });
                 } else {
-                    // Преобразуем данные с Binance в формат TradingView
                     const bars = data.map(bar => ({
                         time: bar[0],
                         open: parseFloat(bar[1]),
@@ -84,9 +85,7 @@ class BinanceDatafeed {
                         volume: parseFloat(bar[5])
                     }));
 
-                    // Сохраняем данные для возможных изменений
-                    this.savedBars = bars;
-
+                    this.savedBars = bars; // Сохраняем данные
                     onHistoryCallback(bars, { noData: false });
                 }
             })
@@ -96,12 +95,12 @@ class BinanceDatafeed {
             });
     }
 
-    // Функция для изменения последней свечи
     modifyLastCandle(priceChange) {
         if (this.savedBars.length > 0) {
             const lastCandle = this.savedBars[this.savedBars.length - 1];
             lastCandle.close += priceChange;
             lastCandle.high += priceChange;
+            this.isModified = true; // Устанавливаем флаг изменения
         }
     }
 
@@ -109,6 +108,6 @@ class BinanceDatafeed {
         if (resolution.includes('D')) return '1d';
         if (resolution.includes('W')) return '1w';
         if (resolution.includes('M')) return '1M';
-        return resolution + 'm';  // Интервалы в минутах
+        return resolution + 'm';
     }
 }
