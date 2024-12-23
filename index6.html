@@ -1,0 +1,848 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8" />
+  <title>Trading Flow - Финальный код</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
+  <!-- Tailwind (если не работает — всё равно .hidden используется) -->
+  <link
+    href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css"
+    rel="stylesheet"
+  />
+
+  <!-- Lucide (иконки) -->
+  <script src="https://unpkg.com/lucide@latest"></script>
+
+  <style>
+    /* Гарантированно скрывает элементы, у которых class="hidden" */
+    .hidden { display: none !important; }
+
+    /* Модальное окно-оверлей */
+    .modal-overlay {
+      position: fixed;
+      top: 0; left: 0; right: 0; bottom: 0;
+      background-color: rgba(0,0,0,0.5);
+      z-index: 9999;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    /* Подсказка (тултип) для графика */
+    #chartTooltip {
+      position: absolute;
+      background-color: #1f2937;
+      border: 1px solid #374151;
+      padding: 0.75rem;
+      border-radius: 0.5rem;
+      box-shadow: 0 4px 8px rgba(0,0,0,0.5);
+      color: #fff;
+      pointer-events: none;
+      white-space: nowrap;
+      z-index: 100;
+      display: none;
+    }
+
+    /* Эффект "пульса" для кнопки «Купить», если надо подсветить */
+    @keyframes pulseGreen {
+      0%   { box-shadow: 0 0 0 0 rgba(16,185,129,0.7); }
+      70%  { box-shadow: 0 0 0 20px rgba(16,185,129,0); }
+      100% { box-shadow: 0 0 0 0 rgba(16,185,129,0); }
+    }
+    .highlight {
+      animation: pulseGreen 1s infinite;
+    }
+
+    /* Плавающая кнопка (FAB) чата */
+    #chatFab {
+      position: fixed;
+      bottom: 20px; 
+      right: 20px; 
+      width: 56px; 
+      height: 56px;
+      background-color: #10b981; 
+      border-radius: 50%;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.4);
+      display: none; /* покажем из JS */
+      justify-content: center;
+      align-items: center;
+      cursor: pointer;
+      z-index: 9999;
+    }
+    #chatFab:hover {
+      background-color: #059669;
+    }
+
+    /* Окно чата (панель) */
+    #brokerChatPanel {
+      position: fixed;
+      bottom: 0; right: 0;
+      width: 320px; 
+      height: 420px; 
+      background-color: #1f2937; 
+      display: none; /* по умолчанию скрыт */
+      flex-direction: column;
+      box-shadow: 0 0 8px rgba(0,0,0,0.5);
+      z-index: 9999;
+    }
+  </style>
+</head>
+<body class="bg-gray-900 text-gray-200 min-h-screen">
+
+<!-- (A) "Пополните счёт" -->
+<div id="investModal" class="modal-overlay">
+  <div class="bg-gray-800 p-6 rounded max-w-sm w-full text-center">
+    <h2 class="text-2xl font-bold text-white mb-4">
+      Пополнение счёта
+    </h2>
+    <p class="text-gray-300 mb-6">
+      Пополните свой счёт сейчас и получите 
+      <span class="font-bold text-green-400">100%</span> бонус!
+    </p>
+    <button
+      class="bg-green-600 hover:bg-green-700 w-full py-2 rounded font-semibold"
+      onclick="onInvest()"
+    >
+      Проинвестировать
+    </button>
+  </div>
+</div>
+
+<!-- (B) "Баланс успешно пополнен" -->
+<div id="balanceModal" class="modal-overlay hidden">
+  <div class="bg-gray-800 p-6 rounded max-w-sm w-full text-center">
+    <h2 class="text-xl font-bold text-green-400 mb-2">
+      Баланс успешно пополнен!
+    </h2>
+    <p class="text-sm text-gray-300">
+      На ваш счёт зачислены средства, включая бонус.
+    </p>
+  </div>
+</div>
+
+<!-- (C) Баннер "Вам написал брокер!" -->
+<div
+  id="brokerNotification"
+  class="fixed bottom-20 right-4 bg-green-600 text-white px-4 py-2 rounded shadow-lg hidden"
+>
+  Вам написал ваш брокер!
+</div>
+
+<!-- (D) "Сделка открыта" -->
+<div id="dealOpenedModal" class="modal-overlay hidden">
+  <div class="bg-gray-800 p-6 rounded max-w-sm w-full text-center">
+    <h2 class="text-xl font-bold text-green-400 mb-2">
+      Сделка открыта!
+    </h2>
+    <p class="text-gray-300 text-sm">
+      Вы успешно открыли сделку.
+    </p>
+  </div>
+</div>
+
+<!-- (E1) "Вы зафиксировали прибыль +100$" -->
+<div id="profitModal" class="modal-overlay hidden">
+  <div class="bg-gray-800 p-6 rounded max-w-sm w-full text-center">
+    <h2 class="text-2xl font-bold text-green-400 mb-3">
+      Поздравляем!
+    </h2>
+    <p class="text-lg text-gray-100 mb-2">
+      Вы зафиксировали прибыль 
+      <span class="font-bold text-green-300">+100$</span>
+    </p>
+    <p class="text-sm text-gray-300">
+      Отличное начало!
+    </p>
+  </div>
+</div>
+
+<!-- (E2) Вопрос "Хотите получить связь...?" -->
+<div id="cabinetModal" class="modal-overlay hidden">
+  <div class="bg-gray-800 p-6 rounded max-w-sm w-full text-center">
+    <h2 class="text-xl font-bold text-green-400 mb-2">
+      Дополнительные возможности
+    </h2>
+    <p class="text-sm text-gray-300 mb-4">
+      Хотите получить постоянную связь с брокером и создать свой личный кабинет?
+    </p>
+    <div class="flex gap-2">
+      <button
+        class="bg-green-600 hover:bg-green-700 w-1/2 py-2 rounded font-semibold"
+        onclick="wantsCabinet(true)"
+      >
+        Да
+      </button>
+      <button
+        class="bg-red-600 hover:bg-red-700 w-1/2 py-2 rounded font-semibold"
+        onclick="wantsCabinet(false)"
+      >
+        Нет
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- (F) "Продать?" => "Вы не следуете указаниям, но можете продать. Вы потеряли -50$..." -->
+<div id="sellModal" class="modal-overlay hidden">
+  <div class="bg-gray-800 p-6 rounded max-w-sm w-full text-center">
+    <h2 class="text-xl font-bold text-red-400 mb-3">
+      Продажа актива
+    </h2>
+    <p class="text-sm text-gray-300 mb-4">
+      Вы не следуете указаниям! Если продадите сейчас, потеряете 
+      <span class="font-bold text-red-300">-50$</span>.<br/>
+      Хотите всё-таки продать?
+    </p>
+    <div class="flex gap-2">
+      <button
+        class="bg-green-600 hover:bg-green-700 w-1/2 py-2 rounded font-semibold"
+        onclick="confirmSell(true)"
+      >
+        Да
+      </button>
+      <button
+        class="bg-red-600 hover:bg-red-700 w-1/2 py-2 rounded font-semibold"
+        onclick="confirmSell(false)"
+      >
+        Нет
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- (F1) "Вы потеряли -50$, хотите только зарабатывать?" -->
+<div id="lostModal" class="modal-overlay hidden">
+  <div class="bg-gray-800 p-6 rounded max-w-sm w-full text-center">
+    <h2 class="text-xl font-bold text-red-400 mb-3">
+      Убыток -50$
+    </h2>
+    <p class="text-sm text-gray-300 mb-4">
+      Хотите в дальнейшем только зарабатывать по стратегии брокера?
+    </p>
+    <div class="flex gap-2">
+      <button
+        class="bg-green-600 hover:bg-green-700 w-1/2 py-2 rounded font-semibold"
+        onclick="wantsConsultation(true)"
+      >
+        Да
+      </button>
+      <button
+        class="bg-red-600 hover:bg-red-700 w-1/2 py-2 rounded font-semibold"
+        onclick="wantsConsultation(false)"
+      >
+        Нет
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- (G) Регистрация -->
+<div id="registrationModal" class="modal-overlay hidden">
+  <div class="bg-gray-800 p-6 rounded-lg shadow-xl w-full max-w-sm text-center relative">
+    <button
+      class="absolute top-2 right-2 text-gray-400 hover:text-gray-300"
+      onclick="closeRegistrationModal()"
+    >
+      ✕
+    </button>
+    <h2 class="text-2xl font-bold text-white mb-4">
+      Регистрация
+    </h2>
+    <form onsubmit="submitRegistrationForm(event)">
+      <div class="mb-4">
+        <label class="block text-gray-300 mb-1">Имя</label>
+        <input id="firstName" type="text" required class="w-full p-2 rounded bg-gray-700 border border-gray-600" />
+      </div>
+      <div class="mb-4">
+        <label class="block text-gray-300 mb-1">Телефон</label>
+        <input id="phone" type="tel" required class="w-full p-2 rounded bg-gray-700 border border-gray-600" />
+      </div>
+      <div class="mb-4">
+        <label class="block text-gray-300 mb-1">E-mail</label>
+        <input id="email" type="email" required class="w-full p-2 rounded bg-gray-700 border border-gray-600" />
+      </div>
+      <div class="mb-4">
+        <label class="inline-flex items-center">
+          <input type="checkbox" required class="form-checkbox h-4 w-4 text-green-500"/>
+          <span class="ml-2 text-sm text-gray-300">Согласен на обработку данных</span>
+        </label>
+      </div>
+      <button
+        class="bg-green-600 hover:bg-green-700 w-full py-2 rounded font-semibold"
+      >
+        Отправить
+      </button>
+    </form>
+  </div>
+</div>
+
+<!-- (H) Контактная форма -->
+<div id="contactModal" class="modal-overlay hidden">
+  <div class="bg-gray-800 p-6 rounded-lg w-full max-w-sm text-center relative">
+    <button
+      class="absolute top-2 right-2 text-gray-400 hover:text-gray-300"
+      onclick="closeContactModal()"
+    >
+      ✕
+    </button>
+    <h2 class="text-xl font-bold text-white mb-2">
+      Остались вопросы?
+    </h2>
+    <p class="text-sm text-gray-300 mb-4">
+      Оставьте контакты, мы поможем заработать и всё объяснить!
+    </p>
+    <form onsubmit="submitContactForm(event)">
+      <div class="mb-4">
+        <label class="block text-gray-300 mb-1">Ваше имя</label>
+        <input id="contactName" type="text" required class="w-full p-2 rounded bg-gray-700 border border-gray-600" />
+      </div>
+      <div class="mb-4">
+        <label class="block text-gray-300 mb-1">Телефон или E-mail</label>
+        <input id="contactInfo" type="text" required class="w-full p-2 rounded bg-gray-700 border border-gray-600" />
+      </div>
+      <button class="bg-green-600 hover:bg-green-700 w-full py-2 rounded font-semibold">
+        Отправить
+      </button>
+    </form>
+  </div>
+</div>
+
+<!-- Шапка -->
+<header class="bg-gray-800 py-4 shadow-sm">
+  <div class="max-w-6xl mx-auto px-4 flex flex-col sm:flex-row justify-between items-center">
+    <h1 class="text-xl font-bold text-green-400 mb-2 sm:mb-0">
+      <span class="inline-block transform rotate-6">&#128200;</span>
+      InvesTrade
+    </h1>
+    <button
+      onclick="openRegistrationModal()"
+      class="bg-green-600 hover:bg-green-700 px-5 py-2 rounded text-white font-semibold"
+    >
+      Зарегистрироваться
+    </button>
+  </div>
+</header>
+
+<!-- Контент -->
+<main class="max-w-6xl mx-auto px-4 pt-8 flex flex-col gap-8">
+  <div class="flex justify-between items-center">
+    <div class="flex items-center bg-gray-800 p-3 rounded shadow">
+      <svg data-lucide="wallet" width="20" class="mr-2 text-green-400"></svg>
+      <span id="userBalance" class="font-bold text-lg">0.00 $</span>
+    </div>
+    <div class="flex items-center">
+      <span class="text-xl font-bold text-green-400 mr-3">BTC/USD</span>
+      <span id="currentPrice" class="bg-gray-800 px-3 py-1 rounded text-lg font-mono">
+        $65000
+      </span>
+    </div>
+  </div>
+
+  <div class="bg-gray-800 p-3 rounded shadow relative" style="height: 300px;">
+    <svg
+      id="priceChart"
+      class="w-full h-full"
+      preserveAspectRatio="none"
+    ></svg>
+    <div
+      id="chartPriceBox"
+      class="absolute top-2 right-2 bg-gray-900 bg-opacity-50 px-3 py-1 rounded text-green-400 font-mono"
+    >
+      $65000
+    </div>
+  </div>
+  <div id="chartTooltip"></div>
+
+  <div class="grid grid-cols-2 gap-4">
+    <button
+      id="buyButton"
+      class="bg-green-500 hover:bg-green-600 p-3 rounded shadow flex items-center justify-center"
+      onclick="handleBuy()"
+    >
+      <svg data-lucide="trending-up" width="20" class="mr-2"></svg>
+      Купить
+    </button>
+    <button
+      id="sellButton"
+      class="bg-red-500 hover:bg-red-600 p-3 rounded shadow flex items-center justify-center"
+      onclick="handleSell()"
+    >
+      <svg data-lucide="trending-down" width="20" class="mr-2"></svg>
+      Продать
+    </button>
+  </div>
+
+  <div class="bg-gray-800 p-4 rounded shadow">
+    <h3 class="font-bold mb-3 text-gray-300">Открытые позиции:</h3>
+    <div id="positionsList" class="max-h-48 overflow-y-auto space-y-2"></div>
+  </div>
+</main>
+
+<!-- Плавающая кнопка чата -->
+<div id="chatFab">
+  <svg data-lucide="message-circle" width="24" height="24" class="text-white"></svg>
+</div>
+
+<!-- Окно чата -->
+<div id="brokerChatPanel">
+  <div class="bg-green-700 p-3 flex justify-between items-center">
+    <div class="flex items-center">
+      <svg data-lucide="message-circle" width="20" class="text-white mr-2"></svg>
+      <span class="font-bold text-white">Ваш брокер</span>
+    </div>
+    <button onclick="closeChatPanel()" class="text-white">
+      <svg data-lucide="x" width="20"></svg>
+    </button>
+  </div>
+  <div id="panelMessages" class="flex-1 overflow-y-auto p-3 space-y-2 text-sm text-gray-100">
+    <div class="p-2 bg-gray-700 rounded">
+      Здравствуйте! Я ваш брокер. Готов помочь в любой момент.
+    </div>
+  </div>
+  <div class="p-3 border-t border-gray-700 flex">
+    <input
+      id="panelInput"
+      class="bg-gray-700 rounded-l px-3 py-2 flex-1 text-sm"
+      placeholder="Ваше сообщение..."
+    />
+    <button
+      class="bg-green-500 rounded-r px-3 py-2"
+      onclick="sendChatMessage()"
+    >
+      <svg data-lucide="send" width="16" class="text-white"></svg>
+    </button>
+  </div>
+</div>
+
+<!-- Футер -->
+<footer class="bg-gray-800 text-gray-400 text-sm mt-8 py-4 text-center">
+  <div class="max-w-6xl mx-auto px-4">
+    <p>
+      *Данный сайт носит демонстрационный характер и не гарантирует доход.<br/>
+      Все суммы, сделки и «прибыли» в примере — условны.
+    </p>
+    <p class="mt-1">
+      © 2024 InvesTrade. При заполнении форм вы даёте согласие на обработку данных.
+    </p>
+  </div>
+</footer>
+
+<script>
+  /****************************
+   * Глобальные переменные
+   ****************************/
+  let balance = 0;
+  let positions = [];
+  let data = [];
+  let currentPrice = 0;
+
+  // Таймеры
+  let chatTimer   = null;
+  let buyTimer    = null;
+  let profitTimer = null;
+  let cabinetTimer= null;
+
+  // Элементы
+  const investModalEl   = document.getElementById('investModal');
+  const balanceModalEl  = document.getElementById('balanceModal');
+  const brokerNotifEl   = document.getElementById('brokerNotification');
+  const dealOpenedEl    = document.getElementById('dealOpenedModal');
+  const profitModalEl   = document.getElementById('profitModal');
+  const cabinetModalEl  = document.getElementById('cabinetModal');
+  const sellModalEl     = document.getElementById('sellModal');
+  const lostModalEl     = document.getElementById('lostModal');
+
+  const registrationEl  = document.getElementById('registrationModal');
+  const contactEl       = document.getElementById('contactModal');
+
+  const userBalanceEl   = document.getElementById('userBalance');
+  const currentPriceEl  = document.getElementById('currentPrice');
+  const chartEl         = document.getElementById('priceChart');
+  const chartTooltipEl  = document.getElementById('chartTooltip');
+  const chartPriceBoxEl = document.getElementById('chartPriceBox');
+  const positionsListEl = document.getElementById('positionsList');
+  const buyButtonEl     = document.getElementById('buyButton');
+  const sellButtonEl    = document.getElementById('sellButton');
+
+  const chatFabEl       = document.getElementById('chatFab');
+  const chatPanelEl     = document.getElementById('brokerChatPanel');
+  const panelMessagesEl = document.getElementById('panelMessages');
+  const panelInputEl    = document.getElementById('panelInput');
+
+  document.addEventListener('DOMContentLoaded', ()=>{
+    lucide.createIcons();
+    init();
+  });
+
+  /****************************
+   * ИНИЦИАЛИЗАЦИЯ
+   ****************************/
+  function init(){
+    data= generateCandles(8);
+    currentPrice= data[data.length-1].close;
+    balance=0;
+    chatFabEl.style.display='none';
+    chatPanelEl.style.display='none';
+
+    renderUI();
+    // Раз в секунду меняем свечи
+    setInterval(updateLastCandle, 1000);
+  }
+
+  // Сгенерировать рандомные свечи
+  function generateCandles(count){
+    let price=65000;
+    let arr=[];
+    for(let i=0; i<count;i++){
+      const change=(Math.random()-0.5)*300;
+      const open= price;
+      price= open+ change;
+      const high= Math.max(open,price)+ Math.random()*100;
+      const low= Math.min(open,price) - Math.random()*100;
+      arr.push({
+        time:String(i),
+        open,
+        close:price,
+        high,
+        low,
+        isUp: price>=open
+      });
+    }
+    return arr;
+  }
+
+  // Обновить последнюю свечу
+  function updateLastCandle(){
+    const last= data[data.length-1];
+    if(!last)return;
+    const change=(Math.random()-0.5)*300;
+    const newPrice= last.close+change;
+    currentPrice= newPrice;
+
+    last.close= newPrice;
+    last.high= Math.max(last.high, newPrice);
+    last.low= Math.min(last.low, newPrice);
+    last.isUp= newPrice>= last.open;
+
+    renderUI();
+  }
+
+  // Отрисовать график и обновить UI
+  function renderUI(){
+    userBalanceEl.textContent= balance.toFixed(2)+' $';
+    currentPriceEl.textContent='$'+ currentPrice.toFixed(1);
+    chartPriceBoxEl.textContent='$'+ currentPrice.toFixed(0);
+
+    // Позиции
+    positionsListEl.innerHTML='';
+    positions.forEach(pos=>{
+      const div= document.createElement('div');
+      const isBuy= (pos.type==='buy');
+      div.className=`flex justify-between items-center p-2 rounded ${
+        isBuy?'bg-green-500/10':'bg-red-500/10'
+      }`;
+      div.innerHTML=`
+        <span class="${isBuy?'text-green-400':'text-red-400'}">
+          ${isBuy? 'Куплено':'Продано'} по цене
+        </span>
+        <span class="text-gray-400">$${pos.price.toFixed(0)}</span>
+      `;
+      positionsListEl.appendChild(div);
+    });
+
+    drawChart();
+  }
+
+  // Нарисовать свечной график
+  function drawChart(){
+    chartEl.innerHTML='';
+    const rect= chartEl.getBoundingClientRect();
+    const w= rect.width; 
+    const h= rect.height;
+    chartEl.setAttribute('viewBox',`0 0 ${w} ${h}`);
+
+    const padL=30;
+    const padB=20;
+    const usableW= w- padL;
+    const usableH= h- padB;
+
+    let minP=Infinity;
+    let maxP=-Infinity;
+    data.forEach(c=>{
+      if(c.low < minP) minP=c.low;
+      if(c.high> maxP) maxP=c.high;
+    });
+    minP-=100;
+    maxP+=100;
+
+    const candleW= Math.max(Math.floor((usableW/data.length)*0.7),2);
+    const spacing= Math.floor(usableW/data.length - candleW);
+
+    function scaleY(val){
+      return usableH - ((val- minP)/(maxP-minP))* usableH;
+    }
+
+    // Ось X
+    chartEl.appendChild(createLine(padL, usableH, w, usableH, '#6B7280'));
+    // Ось Y
+    chartEl.appendChild(createLine(w-1,0, w-1,usableH,'#6B7280'));
+
+    // Тики по Y
+    for(let i=0;i<=4;i++){
+      const val= minP+(maxP-minP)*(i/4);
+      const yPos= scaleY(val);
+      chartEl.appendChild(createLine(padL-5,yPos, padL,yPos,'#6B7280'));
+
+      let txt= document.createElementNS('http://www.w3.org/2000/svg','text');
+      txt.setAttribute('x','2');
+      txt.setAttribute('y', yPos+4);
+      txt.setAttribute('fill','#9CA3AF');
+      txt.setAttribute('font-size','10');
+      txt.textContent='$'+ Math.round(val);
+      chartEl.appendChild(txt);
+    }
+
+    // Тики по X (time)
+    data.forEach((c,i)=>{
+      if(i%2===0){
+        const xPos= padL + i*(candleW+spacing)+ candleW/2;
+        let t= document.createElementNS('http://www.w3.org/2000/svg','text');
+        t.setAttribute('x', xPos-5);
+        t.setAttribute('y', h-5);
+        t.setAttribute('fill','#9CA3AF');
+        t.setAttribute('font-size','10');
+        t.textContent= c.time;
+        chartEl.appendChild(t);
+      }
+    });
+
+    // Свечи
+    data.forEach((c,i)=>{
+      const xPos= padL+ i*(candleW+ spacing);
+      const yH= scaleY(c.high);
+      const yL= scaleY(c.low);
+      const yO= scaleY(c.open);
+      const yC= scaleY(c.close);
+
+      const color= c.isUp?'#22c55e':'#ef4444';
+
+      let wick= createLine(xPos+ candleW/2, yL, xPos+ candleW/2, yH, color);
+      wick.setAttribute('stroke-width','1');
+      chartEl.appendChild(wick);
+
+      let body= document.createElementNS('http://www.w3.org/2000/svg','rect');
+      body.setAttribute('x', xPos);
+      body.setAttribute('y', Math.min(yO,yC));
+      body.setAttribute('width', candleW);
+      body.setAttribute('height', Math.abs(yC-yO)||1);
+      body.setAttribute('fill', color);
+      body.setAttribute('stroke', color);
+
+      body.addEventListener('mouseenter',(e)=> showTooltip(e,c));
+      body.addEventListener('mousemove',(e)=> moveTooltip(e));
+      body.addEventListener('mouseleave', hideTooltip);
+
+      chartEl.appendChild(body);
+    });
+  }
+
+  function createLine(x1,y1,x2,y2,str){
+    let ln= document.createElementNS('http://www.w3.org/2000/svg','line');
+    ln.setAttribute('x1', x1);
+    ln.setAttribute('y1', y1);
+    ln.setAttribute('x2', x2);
+    ln.setAttribute('y2', y2);
+    ln.setAttribute('stroke', str);
+    return ln;
+  }
+
+  function showTooltip(e,c){
+    chartTooltipEl.innerHTML=`
+      <div>Time: ${c.time}</div>
+      <div>Open: $${c.open.toFixed(1)}</div>
+      <div class="text-green-400">High: $${c.high.toFixed(1)}</div>
+      <div class="text-red-400">Low: $${c.low.toFixed(1)}</div>
+      <div class="font-bold text-white">Close: $${c.close.toFixed(1)}</div>
+    `;
+    chartTooltipEl.style.display='block';
+    moveTooltip(e);
+  }
+  function moveTooltip(e){
+    chartTooltipEl.style.left= e.pageX+10+'px';
+    chartTooltipEl.style.top= e.pageY+10+'px';
+  }
+  function hideTooltip(){
+    chartTooltipEl.style.display='none';
+  }
+
+  /****************************
+   * Обработка сценария
+   ****************************/
+  function onInvest(){
+    // 1) Скрыть investModal
+    investModalEl.classList.add('hidden');
+    // 2) Баланс = 1000
+    balance=1000; 
+    userBalanceEl.textContent= balance.toFixed(2)+' $';
+
+    // 3) «Баланс успешно пополнен»
+    balanceModalEl.classList.remove('hidden');
+    setTimeout(()=>{
+      balanceModalEl.classList.add('hidden');
+      // Показать уведомление «Вам написал брокер»
+      brokerNotifEl.classList.remove('hidden');
+      // Плавающая кнопка
+      chatFabEl.style.display='flex';
+
+      // Если за 5 секунд не нажмут кнопку FAB, сами откроем чат
+      chatTimer= setTimeout(()=>{
+        brokerNotifEl.classList.add('hidden');
+        openChatPanel();
+        addPanelMessage("Актив растёт! Нажмите «Купить», чтобы зафиксировать прибыль.", false, true);
+
+        // Если ещё 5 секунд не жмут «Купить», подсветим
+        buyTimer= setTimeout(()=>{
+          buyButtonEl.classList.add('highlight');
+        }, 5000);
+
+      }, 5000);
+
+    }, 5000);
+  }
+
+  // Кнопка «Купить»
+  function handleBuy(){
+    buyButtonEl.classList.remove('highlight');
+    if(buyTimer) clearTimeout(buyTimer);
+
+    // Добавляем позицию
+    positions.unshift({ type:'buy', price: currentPrice });
+    // +100$ прибыли
+    balance+=100;
+    renderUI();
+
+    // «Сделка открыта» (2 сек)
+    dealOpenedEl.classList.remove('hidden');
+    setTimeout(()=>{
+      dealOpenedEl.classList.add('hidden');
+
+      // Окно «Вы зафиксировали прибыль +100$»
+      profitModalEl.classList.remove('hidden');
+      // Пусть висит 3 сек
+      setTimeout(()=>{
+        profitModalEl.classList.add('hidden');
+        // После закрытия сразу (или через 3 сек?) покажем «Хотите кабинет?»
+        setTimeout(()=>{
+          cabinetModalEl.classList.remove('hidden');
+        }, 3000);
+      }, 3000);
+
+    }, 2000);
+  }
+
+  // «Продать»
+  function handleSell(){
+    // Модалка «вы не следуете указаниям... -50$... хотите всё-таки продать?»
+    sellModalEl.classList.remove('hidden');
+  }
+  function confirmSell(isYes){
+    sellModalEl.classList.add('hidden');
+    if(isYes){
+      // Убираем все позиции (или частично)
+      positions=[];
+      balance-=50; // потеряли 50$
+      renderUI();
+
+      // Показываем окно "Вы потеряли -50$, хотите только зарабатывать?"
+      lostModalEl.classList.remove('hidden');
+    } else {
+      addPanelMessage("Хорошо, продолжаем стратегию!", false, true);
+    }
+  }
+
+  // Модалка "Вы потеряли -50$, хотите только зарабатывать?" => да/нет
+  function wantsConsultation(isYes){
+    lostModalEl.classList.add('hidden');
+    if(isYes){
+      // Открываем регистрацию
+      registrationEl.classList.remove('hidden');
+    } else {
+      // Открываем контактную форму
+      contactEl.classList.remove('hidden');
+    }
+  }
+
+  // «Хотите кабинет?» => да/нет
+  function wantsCabinet(isYes){
+    cabinetModalEl.classList.add('hidden');
+    if(isYes){
+      registrationEl.classList.remove('hidden');
+    } else {
+      // «Если вам что-то не понятно, оставьте контакты...»
+      contactEl.classList.remove('hidden');
+    }
+  }
+
+  /****************************
+   * Регистрация / Контакты
+   ****************************/
+  function openRegistrationModal(){
+    registrationEl.classList.remove('hidden');
+  }
+  function closeRegistrationModal(){
+    registrationEl.classList.add('hidden');
+  }
+  function submitRegistrationForm(e){
+    e.preventDefault();
+    const firstName= document.getElementById('firstName').value.trim();
+    alert(`Спасибо, ${firstName}! Мы свяжемся с вами.`);
+    closeRegistrationModal();
+  }
+
+  function closeContactModal(){
+    contactEl.classList.add('hidden');
+  }
+  function submitContactForm(e){
+    e.preventDefault();
+    const name= document.getElementById('contactName').value.trim();
+    const info= document.getElementById('contactInfo').value.trim();
+    alert(`Спасибо, ${name}!\nСвяжемся с вами: ${info}`);
+    closeContactModal();
+  }
+
+  /****************************
+   * Чат
+   ****************************/
+  chatFabEl.addEventListener('click', ()=>{
+    brokerNotifEl.classList.add('hidden');
+    if(chatTimer) clearTimeout(chatTimer);
+    openChatPanel();
+  });
+
+  function openChatPanel(){
+    chatPanelEl.style.display='flex';
+  }
+  function closeChatPanel(){
+    chatPanelEl.style.display='none';
+  }
+
+  function addPanelMessage(msg, isUser=false, isSignal=false){
+    const div= document.createElement('div');
+    div.className=`p-2 rounded ${isSignal?'bg-green-500/20 text-green-300':''} ${isUser?'bg-gray-700':''}`;
+    div.textContent= msg;
+    panelMessagesEl.appendChild(div);
+    panelMessagesEl.scrollTop= panelMessagesEl.scrollHeight;
+  }
+  function sendChatMessage(){
+    const txt= panelInputEl.value.trim();
+    if(!txt)return;
+    addPanelMessage(txt,true);
+    panelInputEl.value='';
+
+    // Автомат. ответ
+    addPanelMessage("Брокер: Если хотите получить полную консультацию, рекомендуем зарегистрироваться!", false, true);
+  }
+</script>
+</body>
+</html>
