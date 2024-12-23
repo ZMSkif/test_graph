@@ -2,43 +2,51 @@
 <html lang="ru">
 <head>
   <meta charset="UTF-8" />
-  <title>Торговая Платформа (Исправленный код)</title>
+  <title>Trading Flow - Final Code</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 
-  <!-- Подключаем Tailwind CSS -->
+  <!-- Tailwind (при желании; если не сработает, все равно будет .hidden) -->
   <link
     href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css"
     rel="stylesheet"
   />
-  <!-- Подключаем Lucide (иконки) -->
+
+  <!-- Lucide (иконки) -->
   <script src="https://unpkg.com/lucide@latest"></script>
 
   <style>
+    /* Гарантированно скрывает элементы с классом hidden */
+    .hidden {
+      display: none !important;
+    }
+
     /* Модальное окно (оверлей) */
     .modal-overlay {
-      position: fixed;
+      position: fixed; 
       top: 0; left: 0; right: 0; bottom: 0;
-      background-color: rgba(0, 0, 0, 0.5);
+      background-color: rgba(0,0,0,0.5);
       z-index: 9999;
-      display: flex;
-      align-items: center;
+      display: flex; 
+      align-items: center; 
       justify-content: center;
     }
-    /* Тултип для графика */
+
+    /* Тултип для графика (по умолчанию скрыт) */
     #chartTooltip {
       position: absolute;
       background-color: #1f2937; /* bg-gray-800 */
       border: 1px solid #374151; /* border-gray-700 */
-      padding: 0.75rem; /* p-3 */
+      padding: 0.75rem;
       border-radius: 0.5rem;
       box-shadow: 0 4px 8px rgba(0,0,0,0.5);
       color: #fff;
       white-space: nowrap;
       pointer-events: none;
       z-index: 100;
-      display: none; /* По умолчанию скрыт */
+      display: none;
     }
-    /* Подсветка кнопки (анимация) */
+
+    /* Анимация «мигания» для кнопки «Купить» */
     @keyframes pulseGreen {
       0%   { box-shadow: 0 0 0 0 rgba(16,185,129,0.7); }
       70%  { box-shadow: 0 0 0 20px rgba(16,185,129,0); }
@@ -51,7 +59,7 @@
 </head>
 <body class="bg-gray-900 text-gray-200 min-h-screen relative">
 
-<!-- (A) МОДАЛКА «ПОПОЛНИТЕ СЧЁТ» — ОТКРЫТА (нет .hidden) -->
+<!-- (A) МОДАЛКА «ПОПОЛНИТЕ СЧЁТ» (ВИДНА ПРИ ЗАГРУЗКЕ) -->
 <div id="investModal" class="modal-overlay">
   <div class="bg-gray-800 p-6 rounded max-w-sm w-full relative">
     <h2 class="text-2xl font-bold mb-4 text-center text-white">
@@ -70,7 +78,7 @@
   </div>
 </div>
 
-<!-- (B) «Баланс успешно пополнен» — СКРЫТО (hidden) -->
+<!-- (B) Модалка «Баланс успешно пополнен» - ИЗНАЧАЛЬНО СКРЫТА -->
 <div id="balanceModal" class="modal-overlay hidden">
   <div class="bg-gray-800 p-6 rounded max-w-sm w-full relative">
     <h2 class="text-xl font-bold text-green-400 text-center mb-2">
@@ -82,7 +90,7 @@
   </div>
 </div>
 
-<!-- (C) Уведомление «Вам написал брокер!» (баннер, не модалка) — hidden -->
+<!-- (C) Уведомление «Вам написал брокер» (не модалка, а баннер) - hidden -->
 <div
   id="brokerNotification"
   class="fixed bottom-16 right-4 bg-green-600 text-white px-4 py-2 rounded shadow-lg hidden"
@@ -90,19 +98,17 @@
   Вам написал ваш брокер!
 </div>
 
-<!-- (D) «Сделка открыта» — СКРЫТО (hidden) -->
+<!-- (D) «Сделка открыта» - hidden -->
 <div id="dealOpenedModal" class="modal-overlay hidden">
   <div class="bg-gray-800 p-6 rounded max-w-sm w-full">
     <h2 class="text-xl font-bold text-green-400 text-center mb-2">
       Сделка открыта!
     </h2>
-    <p class="text-gray-300 text-center">
-      Вы успешно открыли сделку.
-    </p>
+    <p class="text-gray-300 text-center">Вы успешно открыли сделку.</p>
   </div>
 </div>
 
-<!-- (E) «Поздравляем, первая прибыль» — СКРЫТО (hidden) -->
+<!-- (E) «Поздравляем, первая прибыль» - hidden -->
 <div id="profitModal" class="modal-overlay hidden">
   <div class="bg-gray-800 p-6 rounded max-w-sm w-full">
     <h2 class="text-xl font-bold text-green-400 text-center mb-2">
@@ -131,7 +137,7 @@
   </div>
 </div>
 
-<!-- (F) Модалка «Регистрация» — hidden -->
+<!-- (F) Модалка «Регистрация» - hidden -->
 <div id="registrationModal" class="modal-overlay hidden">
   <div class="bg-gray-800 p-6 rounded-lg shadow-xl w-full max-w-sm relative">
     <button
@@ -201,7 +207,7 @@
   </div>
 </div>
 
-<!-- (G) Модалка «Оставьте контакты» — hidden -->
+<!-- (G) Модалка «Оставьте контакты» - hidden -->
 <div id="contactModal" class="modal-overlay hidden">
   <div class="bg-gray-800 p-6 rounded-lg shadow-xl w-full max-w-sm relative">
     <button
@@ -262,6 +268,7 @@
 
 <!-- Основной контент -->
 <main class="max-w-6xl mx-auto px-4 pt-8 flex flex-col lg:flex-row gap-8">
+
   <!-- Левая колонка -->
   <section class="lg:w-3/4 flex flex-col gap-4">
     <!-- Баланс и курс -->
@@ -294,7 +301,7 @@
         </div>
       </div>
     </div>
-    <!-- Тултип (скрыт по умолчанию) -->
+    <!-- Тултип -->
     <div id="chartTooltip"></div>
 
     <!-- Кнопки сделки -->
@@ -323,17 +330,18 @@
         id="positionsList"
         class="space-y-3 max-h-48 overflow-y-auto"
       >
-        <!-- Заполняются динамически -->
+        <!-- Позиции добавляются динамически -->
       </div>
     </div>
   </section>
 
-  <!-- Правая колонка: Чат -->
+  <!-- Правая колонка (Чат) -->
   <aside class="lg:w-1/4 flex flex-col gap-4">
+    <!-- Чат брокера (по умолчанию скрыт через style="display:none") или можно .hidden -->
     <div
       id="brokerChat"
       class="bg-gray-800 rounded-lg shadow-lg flex flex-col"
-      style="display: none;" <!-- Скрыт через style -->
+      style="display: none;" <!-- Чат скрыт, пока не откроем -->
     >
       <!-- Шапка чата -->
       <div class="flex justify-between items-center p-3 border-b border-gray-700">
@@ -352,7 +360,7 @@
       <div id="brokerMessages" class="h-48 overflow-y-auto p-3 space-y-2">
         <div class="p-2 rounded-lg bg-gray-700">
           <div class="text-sm">
-            Здравствуйте! Я ваш персональный брокер. Готов помочь в любой момент.
+            Здравствуйте! Я ваш брокер. Готов помочь в любой момент.
           </div>
           <div class="text-xs text-gray-400 mt-1">12:00</div>
         </div>
@@ -369,7 +377,7 @@
       </div>
     </div>
 
-    <!-- Рекламный блок -->
+    <!-- Рекламный блок (пример) -->
     <div class="bg-gray-800 rounded-lg shadow-lg p-4">
       <h3 class="text-lg font-bold text-green-400 mb-2">Успейте получить!</h3>
       <p class="text-sm text-gray-300">
@@ -384,7 +392,7 @@
   <div class="max-w-6xl mx-auto px-4">
     <p>
       *Данный сайт носит ознакомительный характер и не гарантирует доход.<br/>
-      Все суммы и операции здесь — демонстрация.
+      Все суммы и операции — демонстрация.
     </p>
     <p class="mt-1">
       © 2024 InvesTrade. При заполнении формы, вы даёте согласие на обработку персональных данных.
@@ -393,13 +401,16 @@
 </footer>
 
 <script>
-  /* ========================== ГЛОБАЛЬНЫЕ ПЕРЕМЕННЫЕ ========================== */
+  /* ============= ГЛОБАЛЬНЫЕ ПЕРЕМЕННЫЕ ============= */
   let balance = 0;
   let positions = [];
-  let data = generateCandles(8);
-  let currentPrice = data[data.length - 1]?.close ?? 65000;
+  let data = [];
+  let currentPrice = 0;
 
-  // Ссылки на элементы
+  let chatAutoOpenTimer = null;
+  let buyHighlightTimer = null;
+
+  // Элементы
   const investModalEl       = document.getElementById('investModal');
   const balanceModalEl      = document.getElementById('balanceModal');
   const brokerNotifEl       = document.getElementById('brokerNotification');
@@ -420,59 +431,76 @@
   const positionsListEl     = document.getElementById('positionsList');
   const buyButtonEl         = document.getElementById('buyButton');
 
-  let chatAutoOpenTimer     = null;
-  let buyHighlightTimer     = null;
-
   document.addEventListener('DOMContentLoaded', () => {
     lucide.createIcons();
     init();
   });
 
-  /* ========================== ИНИЦИАЛИЗАЦИЯ ========================== */
+  /* ============= ИНИЦИАЛИЗАЦИЯ ============= */
   function init() {
-    // investModalEl — открыт, остальные hidden => не видны
-    brokerChatEl.style.display = 'none';
+    // Сгенерируем свечи, выставим currentPrice
+    data = generateCandles(8);
+    currentPrice = data[data.length - 1].close;
+    balance = 0;
     renderUI();
-    // Раз в секунду меняем последнюю свечу (демо)
-    setInterval(updateLastCandle, 1000);
+
+    // Раз в секунду «обновляем» последнюю свечу
+    setInterval(() => {
+      updateLastCandle();
+    }, 1000);
   }
 
-  /* ========================== КНОПКА «ПРОИНВЕСТИРОВАТЬ» ========================== */
+  /* ============= ОБНОВЛЕНИЕ ПОСЛЕДНЕЙ СВЕЧИ ============= */
+  function updateLastCandle() {
+    const last = data[data.length - 1];
+    if (!last) return;
+    const change = (Math.random() - 0.5)*300;
+    const newPrice = last.close + change;
+    currentPrice = newPrice;
+    last.close = newPrice;
+    last.high = Math.max(last.high, newPrice);
+    last.low  = Math.min(last.low, newPrice);
+    last.isUp = newPrice >= last.open;
+
+    renderUI();
+  }
+
+  /* ============= ЛОГИКА «ПРОИНВЕСТИРОВАТЬ» ============= */
   function onInvest() {
-    // 1) Прячем окно investModal
+    // Скрываем investModal
     investModalEl.classList.add('hidden');
-    // 2) Баланс = 1000
+    // Баланс = 1000
     balance = 1000;
     userBalanceEl.textContent = balance.toFixed(2) + ' $';
-    // 3) Показываем "Баланс успешно пополнен" на 2 сек
+
+    // Показываем «Баланс успешно пополнен» на 2 секунды
     balanceModalEl.classList.remove('hidden');
     setTimeout(() => {
       balanceModalEl.classList.add('hidden');
-      // показываем уведомление "Вам написал брокер"
       showBrokerNotification();
     }, 2000);
   }
 
-  /* ========================== УВЕДОМЛЕНИЕ «ВАМ НАПИСАЛ БРОКЕР» ========================== */
+  /* Уведомление «Вам написал брокер!» */
   function showBrokerNotification() {
     brokerNotifEl.classList.remove('hidden');
-    // Если за 2 сек не кликнули — открываем чат автоматически
+    // Если за 2 секунды не кликнули — автопоказ чата
     chatAutoOpenTimer = setTimeout(() => {
       brokerNotifEl.classList.add('hidden');
       openChat();
-      // Сообщение
       addBrokerMessage({
         text: "Актив растёт! Нажмите «Купить», чтобы зафиксировать прибыль.",
         time: getTimeString(),
         isSignal: true
       });
-      // Если 3 секунды не нажмут «Купить» — подсветим
+      // Если за 3 сек не нажмут «Купить» — подсветим
       buyHighlightTimer = setTimeout(() => {
         buyButtonEl.classList.add('highlight');
       }, 3000);
     }, 2000);
   }
 
+  /* Открыть/закрыть чат */
   function openChat() {
     brokerChatEl.style.display = 'block';
   }
@@ -484,19 +512,19 @@
     }
   }
 
-  /* ========================== ПОКУПКА / ПРОДАЖА ========================== */
+  /* ============= КНОПКИ «КУПИТЬ» / «ПРОДАТЬ» ============= */
   function onBuy() {
-    // Убираем подсветку
+    // Убрать подсветку
     buyButtonEl.classList.remove('highlight');
     if (buyHighlightTimer) clearTimeout(buyHighlightTimer);
 
     // Добавляем позицию
     positions.unshift({ type: 'buy', price: currentPrice });
-    // Условно +50$
+    // Условно +50$ к балансу
     balance += 50;
     renderUI();
 
-    // Модалка «Сделка открыта» -> 1 сек -> «Поздравляем»
+    // Показать «Сделка открыта» на 1сек → потом «Поздравляем»
     dealOpenedModalEl.classList.remove('hidden');
     setTimeout(() => {
       dealOpenedModalEl.classList.add('hidden');
@@ -507,19 +535,17 @@
     alert("Продажа не доступна в демо!");
   }
 
-  /* ========================== «ПОЗДРАВЛЯЕМ» - ВОПРОС ========================== */
+  /* ============= «ПОЗДРАВЛЯЕМ» - ВОПРОС «ХОТИТЕ КАБИНЕТ?» ============= */
   function wantCabinet(isYes) {
     profitModalEl.classList.add('hidden');
     if (isYes) {
-      // Регистрация
       registrationModalEl.classList.remove('hidden');
     } else {
-      // Оставьте контакты
       contactModalEl.classList.remove('hidden');
     }
   }
 
-  /* ========================== РЕГИСТРАЦИЯ ========================== */
+  /* ============= РЕГИСТРАЦИЯ ============= */
   function openRegistrationModal() {
     registrationModalEl.classList.remove('hidden');
   }
@@ -529,11 +555,11 @@
   function submitRegistrationForm(e) {
     e.preventDefault();
     const firstName = document.getElementById('firstName').value.trim();
-    alert(`Спасибо, ${firstName}! Ваш ЛК будет создан.`);
+    alert(`Спасибо, ${firstName}!\nВаш личный кабинет будет создан.`);
     closeRegistrationModal();
   }
 
-  /* ========================== ОСТАВЬТЕ КОНТАКТЫ ========================== */
+  /* ============= ОСТАВЬТЕ КОНТАКТЫ ============= */
   function closeContactModal() {
     contactModalEl.classList.add('hidden');
   }
@@ -541,11 +567,11 @@
     e.preventDefault();
     const cName = document.getElementById('contactName').value.trim();
     const cInfo = document.getElementById('contactInfo').value.trim();
-    alert(`Спасибо, ${cName}!\nСвяжемся с вами по: ${cInfo}`);
+    alert(`Спасибо, ${cName}!\nМы свяжемся с вами: ${cInfo}`);
     closeContactModal();
   }
 
-  /* ========================== ЧАТ ========================== */
+  /* ============= ЧАТ С БРОКЕРОМ ============= */
   function addBrokerMessage(msg) {
     const div = document.createElement('div');
     div.className = `p-2 rounded-lg ${
@@ -561,60 +587,49 @@
   function sendBrokerMessage() {
     const text = brokerInputEl.value.trim();
     if (!text) return;
-    addBrokerMessage({ text, time: getTimeString(), isSignal: false });
+    addBrokerMessage({
+      text,
+      time: getTimeString(),
+      isSignal: false
+    });
     brokerInputEl.value = '';
   }
 
-  /* ========================== ГЕНЕРАЦИЯ ГРАФИКА ========================== */
+  /* ============= ГРАФИК (СВЕЧИ) ============= */
   function generateCandles(count) {
     let price = 65000;
     const arr = [];
-    for (let i = 0; i < count; i++) {
-      const volatility = 300;
-      const change = (Math.random() - 0.5)*volatility;
-      const open = price;
-      price = open + change;
-      const high = Math.max(open, price) + Math.random()*100;
-      const low  = Math.min(open, price) - Math.random()*100;
+    for (let i=0; i<count; i++){
+      const vol=300;
+      const change=(Math.random()-0.5)*vol;
+      const open=price;
+      price=open+change;
+      const high=Math.max(open,price)+Math.random()*100;
+      const low =Math.min(open,price)-Math.random()*100;
       arr.push({
-        time: i.toString(),
-        open, close: price, high, low,
-        isUp: price >= open
+        time:i.toString(),
+        open,
+        close:price,
+        high, low,
+        isUp: price>=open
       });
     }
     return arr;
   }
-  function updateLastCandle() {
-    const last = data[data.length-1];
-    if (!last) return;
-    const change = (Math.random() - 0.5)*300;
-    const newPrice = last.close + change;
-    currentPrice = newPrice;
-
-    last.close = newPrice;
-    last.high = Math.max(last.high, newPrice);
-    last.low  = Math.min(last.low, newPrice);
-    last.isUp = newPrice >= last.open;
-
-    renderUI();
-  }
-
-  /* Рисуем график */
   function drawChart() {
-    chartEl.innerHTML = '';
-    const rect = chartEl.getBoundingClientRect();
-    const width = rect.width;
-    const height= rect.height;
-    chartEl.setAttribute('viewBox', `0 0 ${width} ${height}`);
+    chartEl.innerHTML='';
+    const rect= chartEl.getBoundingClientRect();
+    const w= rect.width; const h= rect.height;
+    chartEl.setAttribute('viewBox', `0 0 ${w} ${h}`);
 
-    const paddingLeft=30, paddingBottom=20;
-    const usableW= width - paddingLeft;
-    const usableH= height- paddingBottom;
+    const padL=30; const padB=20;
+    const usableW= w - padL;
+    const usableH= h - padB;
 
-    let minP=Infinity, maxP=-Infinity;
+    let minP= Infinity; let maxP=-Infinity;
     data.forEach(c=>{
-      if (c.low < minP) minP=c.low;
-      if (c.high> maxP)maxP=c.high;
+      if(c.low< minP)minP=c.low;
+      if(c.high>maxP)maxP=c.high;
     });
     minP-=100; maxP+=100;
 
@@ -622,77 +637,76 @@
     const spacing= Math.floor(usableW/data.length - candleW);
 
     function scaleY(val){
-      return usableH - ((val - minP)/(maxP - minP))*usableH;
+      return usableH - ((val - minP)/(maxP-minP))*usableH;
     }
 
-    // Ось X, Y
-    chartEl.appendChild(createLine(paddingLeft, usableH, width, usableH, '#6B7280'));
-    chartEl.appendChild(createLine(width-1, 0, width-1, usableH, '#6B7280'));
+    // Ось X
+    chartEl.appendChild(createLine(padL,usableH,w,usableH,'#6B7280'));
+    // Ось Y
+    chartEl.appendChild(createLine(w-1,0,w-1,usableH,'#6B7280'));
 
-    // Несколько меток Y
-    for (let i=0; i<=4; i++){
-      const val = minP + (maxP-minP)*(i/4);
-      const yPos= scaleY(val);
-      chartEl.appendChild(createLine(paddingLeft-5,yPos,paddingLeft,yPos,'#6B7280'));
+    // Метки Y
+    for(let i=0;i<=4;i++){
+      let val= minP + (maxP-minP)*(i/4);
+      let yPos= scaleY(val);
+      chartEl.appendChild(createLine(padL-5,yPos,padL,yPos,'#6B7280'));
 
-      let txt= document.createElementNS('http://www.w3.org/2000/svg','text');
-      txt.setAttribute('x','2'); txt.setAttribute('y', yPos+3);
-      txt.setAttribute('fill','#9CA3AF'); txt.setAttribute('font-size','10');
-      txt.textContent='$'+Math.round(val);
-      chartEl.appendChild(txt);
+      let lbl= document.createElementNS('http://www.w3.org/2000/svg','text');
+      lbl.setAttribute('x','2'); lbl.setAttribute('y',(yPos+3));
+      lbl.setAttribute('fill','#9CA3AF');
+      lbl.setAttribute('font-size','10');
+      lbl.textContent='$'+Math.round(val);
+      chartEl.appendChild(lbl);
     }
-
-    // Метки X (time)
+    // Метки X
     data.forEach((c,i)=>{
-      const xPos= paddingLeft + i*(candleW+spacing)+ candleW/2;
-      if (i%2===0){
+      let xPos= padL + i*(candleW+spacing)+ candleW/2;
+      if(i%2===0){
         let t= document.createElementNS('http://www.w3.org/2000/svg','text');
         t.setAttribute('x', xPos-5);
-        t.setAttribute('y', height-5);
+        t.setAttribute('y', h-5);
         t.setAttribute('fill','#9CA3AF');
         t.setAttribute('font-size','10');
-        t.textContent=c.time;
+        t.textContent= c.time;
         chartEl.appendChild(t);
       }
     });
-
     // Свечи
     data.forEach((c,i)=>{
-      const xPos= paddingLeft+ i*(candleW+spacing);
-      const yHigh= scaleY(c.high);
-      const yLow = scaleY(c.low);
-      const yOpen= scaleY(c.open);
-      const yClose=scaleY(c.close);
-      const color= c.isUp?'#22c55e':'#ef4444';
+      const xPos= padL + i*(candleW+spacing);
+      const yH= scaleY(c.high); 
+      const yL= scaleY(c.low);
+      const yO= scaleY(c.open);
+      const yC= scaleY(c.close);
+      const color= c.isUp? '#22c55e':'#ef4444';
 
-      let wick= createLine(xPos+candleW/2,yLow,xPos+candleW/2,yHigh,color);
+      let wick= createLine(xPos+candleW/2,yL,xPos+candleW/2,yH,color);
       wick.setAttribute('stroke-width','1');
       chartEl.appendChild(wick);
 
-      let body = document.createElementNS('http://www.w3.org/2000/svg','rect');
+      let body= document.createElementNS('http://www.w3.org/2000/svg','rect');
       body.setAttribute('x', xPos);
-      body.setAttribute('y', Math.min(yOpen,yClose));
-      body.setAttribute('width',candleW);
-      body.setAttribute('height', Math.abs(yClose-yOpen)||1);
-      body.setAttribute('fill',color);
-      body.setAttribute('stroke',color);
+      body.setAttribute('y', Math.min(yO,yC));
+      body.setAttribute('width', candleW);
+      body.setAttribute('height', Math.abs(yC-yO)||1);
+      body.setAttribute('fill', color);
+      body.setAttribute('stroke', color);
 
       body.addEventListener('mouseenter',(e)=> showTooltip(e,c));
       body.addEventListener('mousemove',(e)=> moveTooltip(e));
-      body.addEventListener('mouseleave',hideTooltip);
+      body.addEventListener('mouseleave', hideTooltip);
 
       chartEl.appendChild(body);
     });
   }
-  function createLine(x1,y1,x2,y2,strokeC){
+  function createLine(x1,y1,x2,y2,str){
     let ln= document.createElementNS('http://www.w3.org/2000/svg','line');
-    ln.setAttribute('x1', x1); ln.setAttribute('y1', y1);
-    ln.setAttribute('x2', x2); ln.setAttribute('y2', y2);
-    ln.setAttribute('stroke', strokeC);
+    ln.setAttribute('x1',x1); ln.setAttribute('y1',y1);
+    ln.setAttribute('x2',x2); ln.setAttribute('y2',y2);
+    ln.setAttribute('stroke',str);
     return ln;
   }
-  /* Тултип */
-  function showTooltip(e, c){
+  function showTooltip(e,c){
     chartTooltipEl.innerHTML=`
       Time: ${c.time}<br/>
       Open: $${c.open.toFixed(1)}<br/>
@@ -711,21 +725,21 @@
     chartTooltipEl.style.display='none';
   }
 
-  /* Обновить UI */
+  /* Обновить интерфейс */
   function renderUI(){
     userBalanceEl.textContent= balance.toFixed(2)+' $';
-    currentPriceEl.textContent= '$'+currentPrice.toFixed(1);
-    chartPriceBoxEl.textContent= '$'+currentPrice.toFixed(0);
+    currentPriceEl.textContent='$'+ currentPrice.toFixed(1);
+    chartPriceBoxEl.textContent='$'+ currentPrice.toFixed(0);
 
     positionsListEl.innerHTML='';
-    positions.forEach(pos=>{
-      const isBuy= pos.type==='buy';
+    positions.forEach((pos)=>{
       let div= document.createElement('div');
-      div.className= `flex justify-between items-center p-2 rounded-lg ${
-        isBuy? 'bg-green-500/10':'bg-red-500/10'
+      let isBuy= pos.type==='buy';
+      div.className=`flex justify-between items-center p-2 rounded-lg ${
+        isBuy?'bg-green-500/10':'bg-red-500/10'
       }`;
       div.innerHTML=`
-        <span class="${isBuy? 'text-green-400':'text-red-400'}">
+        <span class="${isBuy?'text-green-400':'text-red-400'}">
           ${isBuy?'Куплено':'Продано'} по цене
         </span>
         <span class="text-gray-400">$${pos.price.toFixed(0)}</span>
@@ -736,7 +750,7 @@
     drawChart();
   }
 
-  /* Вспомогательно */
+  /* Вспомогательная */
   function getTimeString(){
     const d= new Date();
     let hh= String(d.getHours()).padStart(2,'0');
@@ -744,6 +758,5 @@
     return hh+':'+mm;
   }
 </script>
-
 </body>
 </html>
