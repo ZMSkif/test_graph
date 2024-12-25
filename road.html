@@ -24,6 +24,12 @@
       border-radius: 5px;
       margin-top: 20px;
     }
+    .rounded-lg {
+      border-radius: 0.5rem !important;
+    }
+    .text-muted {
+      color: #6c757d !important;
+    }
   </style>
 </head>
 <body>
@@ -37,7 +43,7 @@
         <div class="row">
           <!-- Total Project Cost -->
           <div class="col-md-4">
-            <div class="p-3 border bg-blue-50 rounded">
+            <div class="p-3 border bg-blue-50 rounded-lg">
               <h6>Total Project Cost</h6>
               <p id="total-min">Min: $0</p>
               <p id="total-max">Max: $0</p>
@@ -46,7 +52,7 @@
           </div>
           <!-- Project Overview -->
           <div class="col-md-4">
-            <div class="p-3 border bg-green-50 rounded">
+            <div class="p-3 border bg-green-50 rounded-lg">
               <h6>Project Overview</h6>
               <p>Duration: 5 months</p>
               <p>Team size: <span id="team-size">0</span> specialists</p>
@@ -55,7 +61,7 @@
           </div>
           <!-- Team Rates -->
           <div class="col-md-4">
-            <div class="p-3 border bg-purple-50 rounded">
+            <div class="p-3 border bg-purple-50 rounded-lg">
               <h6>Team Rates (USD)</h6>
               <ul id="team-rates" class="list-unstyled mb-0"></ul>
             </div>
@@ -360,7 +366,7 @@ Developer FE\t60%\t65%\t70%\t75%\t80%
               resourceCol.classList.add('col-md-3');
 
               const resourceCard = document.createElement('div');
-              resourceCard.classList.add('p-3', 'bg-gray-50', 'rounded');
+              resourceCard.classList.add('p-3', 'bg-gray-50', 'rounded-lg');
 
               const resourceTitle = document.createElement('h6');
               resourceTitle.textContent = resource.title;
