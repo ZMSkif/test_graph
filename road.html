@@ -1,0 +1,393 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <title>Project Cost Dashboard</title>
+  <!-- Подключение Bootstrap CSS -->
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+  <!-- Подключение Chart.js -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <!-- Подключение PapaParse -->
+  <script src="https://cdn.jsdelivr.net/npm/papaparse@5.3.2/papaparse.min.js"></script>
+  <style>
+    .card {
+      margin-bottom: 20px;
+    }
+    .bg-blue-50 { background-color: #ebf5ff; }
+    .bg-green-50 { background-color: #f0fff4; }
+    .bg-purple-50 { background-color: #f5f3ff; }
+    .alert-custom {
+      background-color: #f8d7da;
+      color: #842029;
+      padding: 15px;
+      border-radius: 5px;
+      margin-top: 20px;
+    }
+  </style>
+</head>
+<body>
+  <div class="container my-4">
+    <!-- Project Cost Overview -->
+    <div class="card">
+      <div class="card-header bg-primary text-white">
+        <h5>Project Cost Overview</h5>
+      </div>
+      <div class="card-body">
+        <div class="row">
+          <!-- Total Project Cost -->
+          <div class="col-md-4">
+            <div class="p-3 border bg-blue-50 rounded">
+              <h6>Total Project Cost</h6>
+              <p id="total-min">Min: $0</p>
+              <p id="total-max">Max: $0</p>
+              <p class="text-muted">Average monthly: $0</p>
+            </div>
+          </div>
+          <!-- Project Overview -->
+          <div class="col-md-4">
+            <div class="p-3 border bg-green-50 rounded">
+              <h6>Project Overview</h6>
+              <p>Duration: 5 months</p>
+              <p>Team size: <span id="team-size">0</span> specialists</p>
+              <p class="text-muted">Total team hours: <span id="total-hours">0</span> hours</p>
+            </div>
+          </div>
+          <!-- Team Rates -->
+          <div class="col-md-4">
+            <div class="p-3 border bg-purple-50 rounded">
+              <h6>Team Rates (USD)</h6>
+              <ul id="team-rates" class="list-unstyled mb-0"></ul>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Team Composition & Workload -->
+    <div class="row">
+      <div class="col-md-6">
+        <div class="card">
+          <div class="card-header bg-secondary text-white">
+            <h5>Team Composition</h5>
+          </div>
+          <div class="card-body">
+            <canvas id="teamCompositionChart" height="200"></canvas>
+          </div>
+        </div>
+      </div>
+      <!-- Monthly Team Utilization -->
+      <div class="col-md-6">
+        <div class="card">
+          <div class="card-header bg-secondary text-white">
+            <h5>Monthly Team Utilization</h5>
+          </div>
+          <div class="card-body">
+            <canvas id="teamUtilizationChart" height="200"></canvas>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Monthly Cost Distribution -->
+    <div class="card">
+      <div class="card-header bg-secondary text-white">
+        <h5>Monthly Cost Distribution</h5>
+      </div>
+      <div class="card-body">
+        <canvas id="monthlyCostChart" height="200"></canvas>
+      </div>
+    </div>
+
+    <!-- Resource Allocation Details -->
+    <div class="card">
+      <div class="card-header bg-secondary text-white">
+        <h5>Resource Allocation Details</h5>
+      </div>
+      <div class="card-body" id="resource-details">
+        <!-- Динамические данные будут добавлены здесь -->
+      </div>
+    </div>
+
+    <!-- Alert for Overload -->
+    <div id="overload-alert" class="alert-custom" style="display: none;">
+      Внимание: Обнаружена перегрузка специалистов! Некоторые члены команды имеют среднюю загрузку более 100%.
+    </div>
+  </div>
+
+  <script>
+    document.addEventListener('DOMContentLoaded', () => {
+      const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042'];
+      const RATES = {
+        'SA': { min: 100, max: 150, title: 'Solution Architect', isHourly: true },
+        'Developer BE': { min: 4500, max: 5000, title: 'Backend Developer', isHourly: false },
+        'Developer full stack': { min: 4500, max: 5000, title: 'Full Stack Developer', isHourly: false },
+        'Developer FE': { min: 4000, max: 4500, title: 'Frontend Developer', isHourly: false }
+      };
+      const HOURS_PER_MONTH = 160;
+
+      // Пример данных (замените на загрузку из файла, если необходимо)
+      const rawData = `
+Role\tMonth 1\tMonth 2\tMonth 3\tMonth 4\tMonth 5
+SA\t50%\t60%\t55%\t65%\t70%
+Developer BE\t80%\t85%\t90%\t75%\t80%
+Developer full stack\t70%\t75%\t80%\t85%\t90%
+Developer FE\t60%\t65%\t70%\t75%\t80%
+      `;
+
+      // Парсинг данных с помощью PapaParse
+      Papa.parse(rawData.trim(), {
+        delimiter: '\t',
+        header: true,
+        skipEmptyLines: true,
+        complete: function(results) {
+          const monthlyStats = [];
+          let totalMinCost = 0;
+          let totalMaxCost = 0;
+          const teamStats = {};
+
+          for (let month = 1; month <= 5; month++) {
+            const monthData = {
+              month: `Month ${month}`,
+              totalHours: 0,
+              minCost: 0,
+              maxCost: 0,
+              resources: []
+            };
+
+            results.data.forEach(row => {
+              if (row.Role && row.Role !== 'Role' && row[`Month ${month}`]) {
+                const allocation = parseFloat(row[`Month ${month}`].replace('%', '')) / 100;
+                const monthlyHours = HOURS_PER_MONTH * allocation;
+                const rate = RATES[row.Role];
+
+                if (rate) {
+                  const minCost = rate.isHourly ? (rate.min * monthlyHours) : rate.min;
+                  const maxCost = rate.isHourly ? (rate.max * monthlyHours) : rate.max;
+
+                  monthData.resources.push({
+                    role: row.Role,
+                    title: rate.title,
+                    allocation: allocation * 100,
+                    hours: monthlyHours,
+                    minCost,
+                    maxCost
+                  });
+
+                  monthData.totalHours += monthlyHours;
+                  monthData.minCost += minCost;
+                  monthData.maxCost += maxCost;
+
+                  // Accumulate team stats
+                  if (!teamStats[row.Role]) {
+                    teamStats[row.Role] = {
+                      role: rate.title,
+                      totalHours: 0,
+                      averageAllocation: 0,
+                      totalCost: 0
+                    };
+                  }
+                  teamStats[row.Role].totalHours += monthlyHours;
+                  teamStats[row.Role].averageAllocation += allocation;
+                  teamStats[row.Role].totalCost += (minCost + maxCost) / 2;
+                }
+              }
+            });
+
+            totalMinCost += monthData.minCost;
+            totalMaxCost += monthData.maxCost;
+            monthlyStats.push(monthData);
+          }
+
+          // Process team composition data
+          const teamCompositionData = Object.entries(teamStats).map(([role, stats]) => ({
+            role: stats.role,
+            value: stats.totalHours,
+            averageAllocation: (stats.averageAllocation / 5) * 100,
+            totalCost: stats.totalCost
+          }));
+
+          // Update Overview Cards
+          document.getElementById('total-min').textContent = `Min: $${Math.round(totalMinCost).toLocaleString()}`;
+          document.getElementById('total-max').textContent = `Max: $${Math.round(totalMaxCost).toLocaleString()}`;
+          document.querySelector('.text-muted').textContent = `Average monthly: $${Math.round((totalMinCost + totalMaxCost) / 10).toLocaleString()}`;
+          document.getElementById('team-size').textContent = Object.keys(RATES).length;
+          document.getElementById('total-hours').textContent = Math.round(teamCompositionData.reduce((sum, member) => sum + member.value, 0)).toLocaleString();
+
+          // Populate Team Rates
+          const teamRatesList = document.getElementById('team-rates');
+          Object.entries(RATES).forEach(([role, rates]) => {
+            const li = document.createElement('li');
+            li.textContent = `${rates.title}: $${rates.min}-${rates.max}${rates.isHourly ? '/hour' : '/month'}`;
+            teamRatesList.appendChild(li);
+          });
+
+          // Draw Team Composition Pie Chart
+          const teamCompositionCtx = document.getElementById('teamCompositionChart').getContext('2d');
+          const pieData = {
+            labels: teamCompositionData.map(item => `${item.role} (${Math.round(item.value)} hrs)`),
+            datasets: [{
+              data: teamCompositionData.map(item => item.value),
+              backgroundColor: COLORS.slice(0, teamCompositionData.length),
+            }]
+          };
+          new Chart(teamCompositionCtx, {
+            type: 'pie',
+            data: pieData,
+            options: {
+              responsive: true,
+              plugins: {
+                legend: {
+                  position: 'bottom',
+                },
+                tooltip: {
+                  callbacks: {
+                    label: function(context) {
+                      const label = context.label || '';
+                      const value = context.parsed || 0;
+                      return `${label}: ${Math.round(value)} hrs`;
+                    }
+                  }
+                }
+              }
+            }
+          });
+
+          // Calculate and Draw Team Utilization Bar Chart
+          const loadData = monthlyStats.map(month => ({
+            name: month.month,
+            hours: month.totalHours,
+            capacity: month.resources.length * HOURS_PER_MONTH,
+            utilization: ((month.totalHours / (month.resources.length * HOURS_PER_MONTH)) * 100).toFixed(1)
+          }));
+
+          const teamUtilizationCtx = document.getElementById('teamUtilizationChart').getContext('2d');
+          new Chart(teamUtilizationCtx, {
+            type: 'bar',
+            data: {
+              labels: loadData.map(item => item.name),
+              datasets: [{
+                label: 'Team Utilization (%)',
+                data: loadData.map(item => item.utilization),
+                backgroundColor: '#8884d8'
+              }]
+            },
+            options: {
+              responsive: true,
+              scales: {
+                y: {
+                  beginAtZero: true,
+                  max: 150
+                }
+              },
+              plugins: {
+                legend: {
+                  display: false
+                },
+                tooltip: {
+                  callbacks: {
+                    label: function(context) {
+                      return `${context.parsed.y}%`;
+                    }
+                  }
+                }
+              }
+            }
+          });
+
+          // Calculate and Draw Monthly Cost Distribution Bar Chart
+          const monthlyCostCtx = document.getElementById('monthlyCostChart').getContext('2d');
+          const monthlyCostData = {
+            labels: monthlyStats.map(item => item.month),
+            datasets: [
+              {
+                label: 'Min Cost',
+                data: monthlyStats.map(item => Math.round(item.minCost)),
+                backgroundColor: '#8884d8'
+              },
+              {
+                label: 'Max Cost',
+                data: monthlyStats.map(item => Math.round(item.maxCost)),
+                backgroundColor: '#82ca9d'
+              }
+            ]
+          };
+          new Chart(monthlyCostCtx, {
+            type: 'bar',
+            data: monthlyCostData,
+            options: {
+              responsive: true,
+              scales: {
+                y: {
+                  beginAtZero: true
+                }
+              },
+              plugins: {
+                tooltip: {
+                  callbacks: {
+                    label: function(context) {
+                      return `$${Math.round(context.parsed.y).toLocaleString()}`;
+                    }
+                  }
+                }
+              }
+            }
+          });
+
+          // Populate Resource Allocation Details
+          const resourceDetails = document.getElementById('resource-details');
+          monthlyStats.forEach(month => {
+            const monthCard = document.createElement('div');
+            monthCard.classList.add('border', 'rounded-lg', 'p-4', 'mb-4');
+
+            const header = document.createElement('div');
+            header.classList.add('d-flex', 'justify-content-between', 'align-items-center', 'mb-4');
+            const monthTitle = document.createElement('h5');
+            monthTitle.textContent = month.month;
+            const monthTotal = document.createElement('div');
+            monthTotal.classList.add('text-muted');
+            monthTotal.textContent = `Total: $${Math.round((month.minCost + month.maxCost) / 2).toLocaleString()}`;
+            header.appendChild(monthTitle);
+            header.appendChild(monthTotal);
+
+            const resourcesGrid = document.createElement('div');
+            resourcesGrid.classList.add('row', 'g-3');
+
+            month.resources.forEach(resource => {
+              const resourceCol = document.createElement('div');
+              resourceCol.classList.add('col-md-3');
+
+              const resourceCard = document.createElement('div');
+              resourceCard.classList.add('p-3', 'bg-gray-50', 'rounded');
+
+              const resourceTitle = document.createElement('h6');
+              resourceTitle.textContent = resource.title;
+
+              const resourceDetails = document.createElement('div');
+              resourceDetails.classList.add('mt-2', 'text-sm');
+              resourceDetails.innerHTML = `
+                <p>Загрузка: ${resource.allocation}%</p>
+                <p>Часы: ${Math.round(resource.hours)}</p>
+                <p>Стоимость: $${Math.round((resource.minCost + resource.maxCost) / 2).toLocaleString()}</p>
+              `;
+
+              resourceCard.appendChild(resourceTitle);
+              resourceCard.appendChild(resourceDetails);
+              resourceCol.appendChild(resourceCard);
+              resourcesGrid.appendChild(resourceCol);
+            });
+
+            monthCard.appendChild(header);
+            monthCard.appendChild(resourcesGrid);
+            resourceDetails.appendChild(monthCard);
+          });
+
+          // Check for Overload and Display Alert
+          const overload = teamCompositionData.some(member => member.averageAllocation > 100);
+          if (overload) {
+            document.getElementById('overload-alert').style.display = 'block';
+          }
+
+        });
+      </script>
+</body>
+</html>
