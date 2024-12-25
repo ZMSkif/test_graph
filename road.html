@@ -158,7 +158,7 @@
       };
       const HOURS_PER_MONTH = 160;
 
-      // Встроенные данные, соответствующие содержимому paste-2.txt
+      // Встроенные данные, соответствующие предоставленному примеру
       const rawData = `
 Role\tMonth 1\tMonth 2\tMonth 3\tMonth 4\tMonth 5
 SA\t50%\t60%\t55%\t65%\t70%
@@ -190,13 +190,13 @@ Developer FE\t60%\t65%\t70%\t75%\t80%
           document.getElementById('team-size').textContent = Object.keys(RATES).length;
           document.getElementById('total-hours').textContent = '1760';
 
-          // Заполнение Team Rates
-          const teamRatesList = document.getElementById('team-rates');
-          Object.entries(RATES).forEach(([role, rates]) => {
-            const li = document.createElement('li');
-            li.textContent = `${rates.title}: $${rates.min}-${rates.max}${rates.isHourly ? '/hour' : '/month'}`;
-            teamRatesList.appendChild(li);
-          });
+          // Заполнение Team Rates (уже заполнено вручную в HTML)
+          // const teamRatesList = document.getElementById('team-rates');
+          // Object.entries(RATES).forEach(([role, rates]) => {
+          //   const li = document.createElement('li');
+          //   li.textContent = `${rates.title}: $${rates.min}-${rates.max}${rates.isHourly ? '/hour' : '/month'}`;
+          //   teamRatesList.appendChild(li);
+          // });
 
           // Создание Team Composition Pie Chart
           const teamCompositionData = Object.values(teamStats).map(item => ({
@@ -421,7 +421,9 @@ Developer FE\t60%\t65%\t70%\t75%\t80%
           });
 
           // Проверка на перегрузку и отображение предупреждения
-          const overload = teamCompositionData.some(member => member.averageAllocation > 100);
+          const overload = resourceData.some(month =>
+            month.resources.some(resource => resource.allocation > 100)
+          );
           if (overload) {
             document.getElementById('overload-alert').style.display = 'block';
           }
