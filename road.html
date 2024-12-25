@@ -30,6 +30,21 @@
     .text-muted {
       color: #6c757d !important;
     }
+    /* Дополнительные стили для улучшения внешнего вида */
+    .card-title {
+      margin-bottom: 0.5rem;
+    }
+    .chart-container {
+      position: relative;
+      width: 100%;
+      height: 400px;
+    }
+    .resource-card {
+      background-color: #f9f9f9;
+      padding: 15px;
+      border-radius: 0.5rem;
+      border: 1px solid #dee2e6;
+    }
   </style>
 </head>
 <body>
@@ -44,7 +59,7 @@
           <!-- Total Project Cost -->
           <div class="col-md-4">
             <div class="p-3 border bg-blue-50 rounded-lg">
-              <h6>Total Project Cost</h6>
+              <h6 class="card-title">Total Project Cost</h6>
               <p id="total-min">Min: $0</p>
               <p id="total-max">Max: $0</p>
               <p class="text-muted" id="average-monthly">Average monthly: $0</p>
@@ -53,7 +68,7 @@
           <!-- Project Overview -->
           <div class="col-md-4">
             <div class="p-3 border bg-green-50 rounded-lg">
-              <h6>Project Overview</h6>
+              <h6 class="card-title">Project Overview</h6>
               <p>Duration: 5 months</p>
               <p>Team size: <span id="team-size">0</span> specialists</p>
               <p class="text-muted">Total team hours: <span id="total-hours">0</span> hours</p>
@@ -62,7 +77,7 @@
           <!-- Team Rates -->
           <div class="col-md-4">
             <div class="p-3 border bg-purple-50 rounded-lg">
-              <h6>Team Rates (USD)</h6>
+              <h6 class="card-title">Team Rates (USD)</h6>
               <ul id="team-rates" class="list-unstyled mb-0"></ul>
             </div>
           </div>
@@ -72,13 +87,16 @@
 
     <!-- Team Composition & Workload -->
     <div class="row">
+      <!-- Team Composition -->
       <div class="col-md-6">
         <div class="card">
           <div class="card-header bg-secondary text-white">
             <h5>Team Composition</h5>
           </div>
           <div class="card-body">
-            <canvas id="teamCompositionChart" height="200"></canvas>
+            <div class="chart-container">
+              <canvas id="teamCompositionChart"></canvas>
+            </div>
           </div>
         </div>
       </div>
@@ -89,7 +107,9 @@
             <h5>Monthly Team Utilization</h5>
           </div>
           <div class="card-body">
-            <canvas id="teamUtilizationChart" height="200"></canvas>
+            <div class="chart-container">
+              <canvas id="teamUtilizationChart"></canvas>
+            </div>
           </div>
         </div>
       </div>
@@ -101,7 +121,9 @@
         <h5>Monthly Cost Distribution</h5>
       </div>
       <div class="card-body">
-        <canvas id="monthlyCostChart" height="200"></canvas>
+        <div class="chart-container">
+          <canvas id="monthlyCostChart"></canvas>
+        </div>
       </div>
     </div>
 
@@ -366,7 +388,7 @@ Developer FE\t60%\t65%\t70%\t75%\t80%
               resourceCol.classList.add('col-md-3');
 
               const resourceCard = document.createElement('div');
-              resourceCard.classList.add('p-3', 'bg-gray-50', 'rounded-lg');
+              resourceCard.classList.add('resource-card');
 
               const resourceTitle = document.createElement('h6');
               resourceTitle.textContent = resource.title;
@@ -393,7 +415,13 @@ Developer FE\t60%\t65%\t70%\t75%\t80%
           // Check for Overload and Display Alert
           const overload = teamCompositionData.some(member => member.averageAllocation > 100);
           if (overload) {
-            document.getElementById('overload-alert').style.display = 'block';
+            // Создаём кастомное уведомление, так как Alert из React UI не доступен
+            const alertDiv = document.createElement('div');
+            alertDiv.classList.add('alert', 'alert-danger', 'mt-4');
+            alertDiv.innerHTML = `
+              <strong>Внимание:</strong> Обнаружена перегрузка специалистов! Некоторые члены команды имеют среднюю загрузку более 100%.
+            `;
+            document.querySelector('.container').appendChild(alertDiv);
           }
         });
       </script>
