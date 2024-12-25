@@ -138,8 +138,8 @@
     </div>
 
     <!-- Alert for Overload -->
-    <div id="overload-alert" class="alert-custom" style="display: none;">
-      Внимание: Обнаружена перегрузка специалистов! Некоторые члены команды имеют среднюю загрузку более 100%.
+    <div id="overload-alert" class="alert alert-danger alert-custom" style="display: none;">
+      <strong>Внимание:</strong> Обнаружена перегрузка специалистов! Некоторые члены команды имеют среднюю загрузку более 100%.
     </div>
   </div>
 
@@ -174,6 +174,7 @@ Developer FE\t60%\t65%\t70%\t75%\t80%
           let totalMaxCost = 0;
           const teamStats = {};
 
+          // Обработка данных по месяцам
           for (let month = 1; month <= 5; month++) {
             const monthData = {
               month: `Month ${month}`,
@@ -227,7 +228,7 @@ Developer FE\t60%\t65%\t70%\t75%\t80%
             monthlyStats.push(monthData);
           }
 
-          // Process team composition data
+          // Обработка данных состава команды
           const teamCompositionData = Object.entries(teamStats).map(([role, stats]) => ({
             role: stats.role,
             value: stats.totalHours,
@@ -235,7 +236,7 @@ Developer FE\t60%\t65%\t70%\t75%\t80%
             totalCost: stats.totalCost
           }));
 
-          // Update Overview Cards
+          // Обновление Overview Cards
           document.getElementById('total-min').textContent = `Min: $${Math.round(totalMinCost).toLocaleString()}`;
           document.getElementById('total-max').textContent = `Max: $${Math.round(totalMaxCost).toLocaleString()}`;
           const averageMonthly = Math.round((totalMinCost + totalMaxCost) / 10).toLocaleString();
@@ -244,7 +245,7 @@ Developer FE\t60%\t65%\t70%\t75%\t80%
           const totalTeamHours = Math.round(teamCompositionData.reduce((sum, member) => sum + member.value, 0)).toLocaleString();
           document.getElementById('total-hours').textContent = totalTeamHours;
 
-          // Populate Team Rates
+          // Заполнение Team Rates
           const teamRatesList = document.getElementById('team-rates');
           Object.entries(RATES).forEach(([role, rates]) => {
             const li = document.createElement('li');
@@ -252,7 +253,7 @@ Developer FE\t60%\t65%\t70%\t75%\t80%
             teamRatesList.appendChild(li);
           });
 
-          // Draw Team Composition Pie Chart
+          // Создание Team Composition Pie Chart
           const teamCompositionCtx = document.getElementById('teamCompositionChart').getContext('2d');
           const pieData = {
             labels: teamCompositionData.map(item => `${item.role} (${Math.round(item.value)} hrs)`),
@@ -283,7 +284,7 @@ Developer FE\t60%\t65%\t70%\t75%\t80%
             }
           });
 
-          // Calculate and Draw Team Utilization Bar Chart
+          // Создание Team Utilization Bar Chart
           const loadData = monthlyStats.map(month => ({
             name: month.month,
             hours: month.totalHours,
@@ -325,7 +326,7 @@ Developer FE\t60%\t65%\t70%\t75%\t80%
             }
           });
 
-          // Calculate and Draw Monthly Cost Distribution Bar Chart
+          // Создание Monthly Cost Distribution Bar Chart
           const monthlyCostCtx = document.getElementById('monthlyCostChart').getContext('2d');
           const monthlyCostData = {
             labels: monthlyStats.map(item => item.month),
@@ -364,7 +365,7 @@ Developer FE\t60%\t65%\t70%\t75%\t80%
             }
           });
 
-          // Populate Resource Allocation Details
+          // Заполнение Resource Allocation Details
           const resourceDetails = document.getElementById('resource-details');
           monthlyStats.forEach(month => {
             const monthCard = document.createElement('div');
@@ -412,16 +413,10 @@ Developer FE\t60%\t65%\t70%\t75%\t80%
             resourceDetails.appendChild(monthCard);
           });
 
-          // Check for Overload and Display Alert
+          // Проверка на перегрузку и отображение предупреждения
           const overload = teamCompositionData.some(member => member.averageAllocation > 100);
           if (overload) {
-            // Создаём кастомное уведомление, так как Alert из React UI не доступен
-            const alertDiv = document.createElement('div');
-            alertDiv.classList.add('alert', 'alert-danger', 'mt-4');
-            alertDiv.innerHTML = `
-              <strong>Внимание:</strong> Обнаружена перегрузка специалистов! Некоторые члены команды имеют среднюю загрузку более 100%.
-            `;
-            document.querySelector('.container').appendChild(alertDiv);
+            document.getElementById('overload-alert').style.display = 'block';
           }
         });
       </script>
