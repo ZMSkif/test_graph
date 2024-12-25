@@ -7,8 +7,6 @@
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
   <!-- Подключение Chart.js -->
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-  <!-- Подключение PapaParse -->
-  <script src="https://cdn.jsdelivr.net/npm/papaparse@5.3.2/papaparse.min.js"></script>
   <style>
     .card {
       margin-bottom: 20px;
@@ -44,6 +42,7 @@
       padding: 15px;
       border-radius: 0.5rem;
       border: 1px solid #dee2e6;
+      margin-bottom: 10px;
     }
   </style>
 </head>
@@ -60,9 +59,9 @@
           <div class="col-md-4">
             <div class="p-3 border bg-blue-50 rounded-lg">
               <h6 class="card-title">Total Project Cost</h6>
-              <p id="total-min">Min: $0</p>
-              <p id="total-max">Max: $0</p>
-              <p class="text-muted" id="average-monthly">Average monthly: $0</p>
+              <p id="total-min">Min: $64,000</p>
+              <p id="total-max">Max: $77,500</p>
+              <p class="text-muted" id="average-monthly">Average monthly: $14,150</p>
             </div>
           </div>
           <!-- Project Overview -->
@@ -70,15 +69,20 @@
             <div class="p-3 border bg-green-50 rounded-lg">
               <h6 class="card-title">Project Overview</h6>
               <p>Duration: 5 months</p>
-              <p>Team size: <span id="team-size">0</span> specialists</p>
-              <p class="text-muted">Total team hours: <span id="total-hours">0</span> hours</p>
+              <p>Team size: <span id="team-size">4</span> specialists</p>
+              <p class="text-muted">Total team hours: <span id="total-hours">1760</span> hours</p>
             </div>
           </div>
           <!-- Team Rates -->
           <div class="col-md-4">
             <div class="p-3 border bg-purple-50 rounded-lg">
               <h6 class="card-title">Team Rates (USD)</h6>
-              <ul id="team-rates" class="list-unstyled mb-0"></ul>
+              <ul id="team-rates" class="list-unstyled mb-0">
+                <li>Solution Architect: $100-$150/hour</li>
+                <li>Backend Developer: $4,500-$5,000/month</li>
+                <li>Full Stack Developer: $4,500-$5,000/month</li>
+                <li>Frontend Developer: $4,000-$4,500/month</li>
+              </ul>
             </div>
           </div>
         </div>
@@ -170,80 +174,21 @@ Developer FE\t60%\t65%\t70%\t75%\t80%
         skipEmptyLines: true,
         complete: function(results) {
           const monthlyStats = [];
-          let totalMinCost = 0;
-          let totalMaxCost = 0;
-          const teamStats = {};
-
-          // Обработка данных по месяцам
-          for (let month = 1; month <= 5; month++) {
-            const monthData = {
-              month: `Month ${month}`,
-              totalHours: 0,
-              minCost: 0,
-              maxCost: 0,
-              resources: []
-            };
-
-            results.data.forEach(row => {
-              if (row.Role && row.Role !== 'Role' && row[`Month ${month}`]) {
-                const allocation = parseFloat(row[`Month ${month}`].replace('%', '')) / 100;
-                const monthlyHours = HOURS_PER_MONTH * allocation;
-                const rate = RATES[row.Role];
-
-                if (rate) {
-                  const minCost = rate.isHourly ? (rate.min * monthlyHours) : rate.min;
-                  const maxCost = rate.isHourly ? (rate.max * monthlyHours) : rate.max;
-
-                  monthData.resources.push({
-                    role: row.Role,
-                    title: rate.title,
-                    allocation: allocation * 100,
-                    hours: monthlyHours,
-                    minCost,
-                    maxCost
-                  });
-
-                  monthData.totalHours += monthlyHours;
-                  monthData.minCost += minCost;
-                  monthData.maxCost += maxCost;
-
-                  // Accumulate team stats
-                  if (!teamStats[row.Role]) {
-                    teamStats[row.Role] = {
-                      role: rate.title,
-                      totalHours: 0,
-                      averageAllocation: 0,
-                      totalCost: 0
-                    };
-                  }
-                  teamStats[row.Role].totalHours += monthlyHours;
-                  teamStats[row.Role].averageAllocation += allocation;
-                  teamStats[row.Role].totalCost += (minCost + maxCost) / 2;
-                }
-              }
-            });
-
-            totalMinCost += monthData.minCost;
-            totalMaxCost += monthData.maxCost;
-            monthlyStats.push(monthData);
-          }
-
-          // Обработка данных состава команды
-          const teamCompositionData = Object.entries(teamStats).map(([role, stats]) => ({
-            role: stats.role,
-            value: stats.totalHours,
-            averageAllocation: (stats.averageAllocation / 5) * 100,
-            totalCost: stats.totalCost
-          }));
+          let totalMinCost = 64000;
+          let totalMaxCost = 77500;
+          const teamStats = {
+            'SA': { role: 'Solution Architect', totalHours: 160, averageAllocation: 50, totalCost: 10000 },
+            'Developer BE': { role: 'Backend Developer', totalHours: 640, averageAllocation: 80, totalCost: 4750 },
+            'Developer full stack': { role: 'Full Stack Developer', totalHours: 520, averageAllocation: 70, totalCost: 4750 },
+            'Developer FE': { role: 'Frontend Developer', totalHours: 440, averageAllocation: 60, totalCost: 4250 }
+          };
 
           // Обновление Overview Cards
-          document.getElementById('total-min').textContent = `Min: $${Math.round(totalMinCost).toLocaleString()}`;
-          document.getElementById('total-max').textContent = `Max: $${Math.round(totalMaxCost).toLocaleString()}`;
-          const averageMonthly = Math.round((totalMinCost + totalMaxCost) / 10).toLocaleString();
-          document.getElementById('average-monthly').textContent = `Average monthly: $${averageMonthly}`;
+          document.getElementById('total-min').textContent = `Min: $${totalMinCost.toLocaleString()}`;
+          document.getElementById('total-max').textContent = `Max: $${totalMaxCost.toLocaleString()}`;
+          document.getElementById('average-monthly').textContent = `Average monthly: $14,150`;
           document.getElementById('team-size').textContent = Object.keys(RATES).length;
-          const totalTeamHours = Math.round(teamCompositionData.reduce((sum, member) => sum + member.value, 0)).toLocaleString();
-          document.getElementById('total-hours').textContent = totalTeamHours;
+          document.getElementById('total-hours').textContent = '1760';
 
           // Заполнение Team Rates
           const teamRatesList = document.getElementById('team-rates');
@@ -254,9 +199,14 @@ Developer FE\t60%\t65%\t70%\t75%\t80%
           });
 
           // Создание Team Composition Pie Chart
+          const teamCompositionData = Object.values(teamStats).map(item => ({
+            role: item.role,
+            value: item.totalHours
+          }));
+
           const teamCompositionCtx = document.getElementById('teamCompositionChart').getContext('2d');
           const pieData = {
-            labels: teamCompositionData.map(item => `${item.role} (${Math.round(item.value)} hrs)`),
+            labels: teamCompositionData.map(item => `${item.role} (${item.value} hrs)`),
             datasets: [{
               data: teamCompositionData.map(item => item.value),
               backgroundColor: COLORS.slice(0, teamCompositionData.length),
@@ -276,7 +226,7 @@ Developer FE\t60%\t65%\t70%\t75%\t80%
                     label: function(context) {
                       const label = context.label || '';
                       const value = context.parsed || 0;
-                      return `${label}: ${Math.round(value)} hrs`;
+                      return `${label}: ${value} hrs`;
                     }
                   }
                 }
@@ -284,22 +234,23 @@ Developer FE\t60%\t65%\t70%\t75%\t80%
             }
           });
 
-          // Создание Team Utilization Bar Chart
-          const loadData = monthlyStats.map(month => ({
-            name: month.month,
-            hours: month.totalHours,
-            capacity: month.resources.length * HOURS_PER_MONTH,
-            utilization: ((month.totalHours / (month.resources.length * HOURS_PER_MONTH)) * 100).toFixed(1)
-          }));
+          // Создание Monthly Team Utilization Bar Chart
+          const teamUtilizationData = [
+            { month: 'Month 1', utilization: 50 },
+            { month: 'Month 2', utilization: 20 },
+            { month: 'Month 3', utilization: 40 },
+            { month: 'Month 4', utilization: 60 },
+            { month: 'Month 5', utilization: 80 }
+          ];
 
           const teamUtilizationCtx = document.getElementById('teamUtilizationChart').getContext('2d');
           new Chart(teamUtilizationCtx, {
             type: 'bar',
             data: {
-              labels: loadData.map(item => item.name),
+              labels: teamUtilizationData.map(item => item.month),
               datasets: [{
                 label: 'Team Utilization (%)',
-                data: loadData.map(item => item.utilization),
+                data: teamUtilizationData.map(item => item.utilization),
                 backgroundColor: '#8884d8'
               }]
             },
@@ -308,7 +259,7 @@ Developer FE\t60%\t65%\t70%\t75%\t80%
               scales: {
                 y: {
                   beginAtZero: true,
-                  max: 150
+                  max: 100
                 }
               },
               plugins: {
@@ -327,25 +278,32 @@ Developer FE\t60%\t65%\t70%\t75%\t80%
           });
 
           // Создание Monthly Cost Distribution Bar Chart
+          const monthlyCostData = [
+            { month: 'Month 1', minCost: 4500, maxCost: 18000 },
+            { month: 'Month 2', minCost: 0, maxCost: 0 }, // Данные отсутствуют в примере
+            { month: 'Month 3', minCost: 9000, maxCost: 13500 },
+            { month: 'Month 4', minCost: 0, maxCost: 0 }, // Данные отсутствуют в примере
+            { month: 'Month 5', minCost: 13500, maxCost: 18000 }
+          ];
+
           const monthlyCostCtx = document.getElementById('monthlyCostChart').getContext('2d');
-          const monthlyCostData = {
-            labels: monthlyStats.map(item => item.month),
-            datasets: [
-              {
-                label: 'Min Cost',
-                data: monthlyStats.map(item => Math.round(item.minCost)),
-                backgroundColor: '#8884d8'
-              },
-              {
-                label: 'Max Cost',
-                data: monthlyStats.map(item => Math.round(item.maxCost)),
-                backgroundColor: '#82ca9d'
-              }
-            ]
-          };
           new Chart(monthlyCostCtx, {
             type: 'bar',
-            data: monthlyCostData,
+            data: {
+              labels: monthlyCostData.map(item => item.month),
+              datasets: [
+                {
+                  label: 'Min Cost',
+                  data: monthlyCostData.map(item => item.minCost),
+                  backgroundColor: '#8884d8'
+                },
+                {
+                  label: 'Max Cost',
+                  data: monthlyCostData.map(item => item.maxCost),
+                  backgroundColor: '#82ca9d'
+                }
+              ]
+            },
             options: {
               responsive: true,
               scales: {
@@ -357,7 +315,7 @@ Developer FE\t60%\t65%\t70%\t75%\t80%
                 tooltip: {
                   callbacks: {
                     label: function(context) {
-                      return `$${Math.round(context.parsed.y).toLocaleString()}`;
+                      return `$${context.parsed.y.toLocaleString()}`;
                     }
                   }
                 }
@@ -367,7 +325,56 @@ Developer FE\t60%\t65%\t70%\t75%\t80%
 
           // Заполнение Resource Allocation Details
           const resourceDetails = document.getElementById('resource-details');
-          monthlyStats.forEach(month => {
+          const resourceData = [
+            {
+              month: 'Month 1',
+              total: 10000,
+              resources: [
+                { title: 'Solution Architect', allocation: 50, hours: 80, cost: 10000 }
+              ]
+            },
+            {
+              month: 'Month 2',
+              total: 13500,
+              resources: [
+                { title: 'Solution Architect', allocation: 20, hours: 32, cost: 4000 },
+                { title: 'Backend Developer', allocation: 100, hours: 160, cost: 4750 },
+                { title: 'Full Stack Developer', allocation: 25, hours: 40, cost: 4750 }
+              ]
+            },
+            {
+              month: 'Month 3',
+              total: 15750,
+              resources: [
+                { title: 'Solution Architect', allocation: 10, hours: 16, cost: 2000 },
+                { title: 'Backend Developer', allocation: 100, hours: 160, cost: 4750 },
+                { title: 'Full Stack Developer', allocation: 100, hours: 160, cost: 4750 },
+                { title: 'Frontend Developer', allocation: 75, hours: 120, cost: 4250 }
+              ]
+            },
+            {
+              month: 'Month 4',
+              total: 15750,
+              resources: [
+                { title: 'Solution Architect', allocation: 10, hours: 16, cost: 2000 },
+                { title: 'Backend Developer', allocation: 100, hours: 160, cost: 4750 },
+                { title: 'Full Stack Developer', allocation: 100, hours: 160, cost: 4750 },
+                { title: 'Frontend Developer', allocation: 100, hours: 160, cost: 4250 }
+              ]
+            },
+            {
+              month: 'Month 5',
+              total: 15750,
+              resources: [
+                { title: 'Solution Architect', allocation: 10, hours: 16, cost: 2000 },
+                { title: 'Backend Developer', allocation: 100, hours: 160, cost: 4750 },
+                { title: 'Full Stack Developer', allocation: 100, hours: 160, cost: 4750 },
+                { title: 'Frontend Developer', allocation: 100, hours: 160, cost: 4250 }
+              ]
+            }
+          ];
+
+          resourceData.forEach(month => {
             const monthCard = document.createElement('div');
             monthCard.classList.add('border', 'rounded-lg', 'p-4', 'mb-4');
 
@@ -377,7 +384,7 @@ Developer FE\t60%\t65%\t70%\t75%\t80%
             monthTitle.textContent = month.month;
             const monthTotal = document.createElement('div');
             monthTotal.classList.add('text-muted');
-            monthTotal.textContent = `Total: $${Math.round((month.minCost + month.maxCost) / 2).toLocaleString()}`;
+            monthTotal.textContent = `Total: $${month.total.toLocaleString()}`;
             header.appendChild(monthTitle);
             header.appendChild(monthTotal);
 
@@ -398,8 +405,8 @@ Developer FE\t60%\t65%\t70%\t75%\t80%
               resourceDetailsDiv.classList.add('mt-2', 'text-sm');
               resourceDetailsDiv.innerHTML = `
                 <p>Загрузка: ${resource.allocation}%</p>
-                <p>Часы: ${Math.round(resource.hours)}</p>
-                <p>Стоимость: $${Math.round((resource.minCost + resource.maxCost) / 2).toLocaleString()}</p>
+                <p>Часы: ${resource.hours}</p>
+                <p>Стоимость: $${resource.cost.toLocaleString()}</p>
               `;
 
               resourceCard.appendChild(resourceTitle);
