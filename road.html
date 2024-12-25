@@ -16,6 +16,7 @@
     .bg-blue-50 { background-color: #ebf5ff; }
     .bg-green-50 { background-color: #f0fff4; }
     .bg-purple-50 { background-color: #f5f3ff; }
+    .bg-gray-50 { background-color: #f9f9f9; }
     .alert-custom {
       background-color: #f8d7da;
       color: #842029;
@@ -40,7 +41,7 @@
               <h6>Total Project Cost</h6>
               <p id="total-min">Min: $0</p>
               <p id="total-max">Max: $0</p>
-              <p class="text-muted">Average monthly: $0</p>
+              <p class="text-muted" id="average-monthly">Average monthly: $0</p>
             </div>
           </div>
           <!-- Project Overview -->
@@ -125,7 +126,7 @@
       };
       const HOURS_PER_MONTH = 160;
 
-      // Пример данных (замените на загрузку из файла, если необходимо)
+      // Встроенные данные, соответствующие содержимому paste-2.txt
       const rawData = `
 Role\tMonth 1\tMonth 2\tMonth 3\tMonth 4\tMonth 5
 SA\t50%\t60%\t55%\t65%\t70%
@@ -209,9 +210,11 @@ Developer FE\t60%\t65%\t70%\t75%\t80%
           // Update Overview Cards
           document.getElementById('total-min').textContent = `Min: $${Math.round(totalMinCost).toLocaleString()}`;
           document.getElementById('total-max').textContent = `Max: $${Math.round(totalMaxCost).toLocaleString()}`;
-          document.querySelector('.text-muted').textContent = `Average monthly: $${Math.round((totalMinCost + totalMaxCost) / 10).toLocaleString()}`;
+          const averageMonthly = Math.round((totalMinCost + totalMaxCost) / 10).toLocaleString();
+          document.getElementById('average-monthly').textContent = `Average monthly: $${averageMonthly}`;
           document.getElementById('team-size').textContent = Object.keys(RATES).length;
-          document.getElementById('total-hours').textContent = Math.round(teamCompositionData.reduce((sum, member) => sum + member.value, 0)).toLocaleString();
+          const totalTeamHours = Math.round(teamCompositionData.reduce((sum, member) => sum + member.value, 0)).toLocaleString();
+          document.getElementById('total-hours').textContent = totalTeamHours;
 
           // Populate Team Rates
           const teamRatesList = document.getElementById('team-rates');
@@ -362,16 +365,16 @@ Developer FE\t60%\t65%\t70%\t75%\t80%
               const resourceTitle = document.createElement('h6');
               resourceTitle.textContent = resource.title;
 
-              const resourceDetails = document.createElement('div');
-              resourceDetails.classList.add('mt-2', 'text-sm');
-              resourceDetails.innerHTML = `
+              const resourceDetailsDiv = document.createElement('div');
+              resourceDetailsDiv.classList.add('mt-2', 'text-sm');
+              resourceDetailsDiv.innerHTML = `
                 <p>Загрузка: ${resource.allocation}%</p>
                 <p>Часы: ${Math.round(resource.hours)}</p>
                 <p>Стоимость: $${Math.round((resource.minCost + resource.maxCost) / 2).toLocaleString()}</p>
               `;
 
               resourceCard.appendChild(resourceTitle);
-              resourceCard.appendChild(resourceDetails);
+              resourceCard.appendChild(resourceDetailsDiv);
               resourceCol.appendChild(resourceCard);
               resourcesGrid.appendChild(resourceCol);
             });
@@ -386,7 +389,6 @@ Developer FE\t60%\t65%\t70%\t75%\t80%
           if (overload) {
             document.getElementById('overload-alert').style.display = 'block';
           }
-
         });
       </script>
 </body>
