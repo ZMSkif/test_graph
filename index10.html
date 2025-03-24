@@ -8,7 +8,19 @@
     <script src="https://unpkg.com/lightweight-charts/dist/lightweight-charts.standalone.production.js"></script>
     <style>
         body, html { height: 100%; margin: 0; padding: 0; }
-        #chart { width: 100%; height: calc(100% - 100px); }
+        #chart { width: 100%; height: calc(100% - 100px); position: relative; }
+        .loading-overlay { 
+            position: absolute; 
+            top: 0; 
+            left: 0; 
+            width: 100%; 
+            height: 100%; 
+            background: rgba(0, 0, 0, 0.5); 
+            display: flex; 
+            align-items: center; 
+            justify-content: center; 
+            z-index: 10; 
+        }
     </style>
 </head>
 <body class="bg-gray-900 text-white">
@@ -28,15 +40,28 @@
         <button class="timeframe-btn mx-1 px-3 py-1 rounded bg-gray-700 hover:bg-blue-500 transition" data-interval="4h">4ч</button>
         <button class="timeframe-btn mx-1 px-3 py-1 rounded bg-gray-700 hover:bg-blue-500 transition" data-interval="1d">1д</button>
     </div>
-    <div id="chart"></div>
+    <div id="chart">
+        <div id="loadingOverlay" class="loading-overlay hidden">
+            <div class="text-white text-lg">Загрузка...</div>
+        </div>
+    </div>
 
-    <script>
+    <script type="module">
+        // Типизация для данных свечей
+        /** @typedef {{ time: number, open: number, high: number, low: number, close: number }} Candle */
+
+        // Кэш для данных
+        const dataCache = new Map();
+
         // Инициализация графика
-        const chart = LightweightCharts.createChart(document.getElementById('chart'), {
+        const chartContainer = document.getElementById('chart');
+        const loadingOverlay = document.getElementById('loadingOverlay');
+        const chart = LightweightCharts.createChart(chartContainer, {
             layout: { background: { color: '#131722' }, textColor: '#d1d4dc' },
             grid: { vertLines: { color: '#2a2e39' }, horzLines: { color: '#2a2e39' } },
             crosshair: { mode: LightweightCharts.CrosshairMode.Normal },
-            timeScale: { timeVisible: true, secondsVisible: false, borderColor: '#2a2e39' }
+            timeScale: { timeVisible: true, secondsVisible: false, borderColor: '#2a2e39' },
+            localization: { locale: 'ru-RU' }
         });
 
         const candleSeries = chart.addCandlestickSeries({
@@ -47,26 +72,52 @@
             borderVisible: false
         });
 
+        // Прокси для обхода CORS (если нужно)
+        const PROXY_URL = 'https://cors-anywhere.herokuapp.com/';
+        const BINANCE_API = 'https://api.binance.com/api/v3/klines';
+
+        // Функция для показа/скрытия загрузки
+        const toggleLoading = (isLoading) => {
+            loadingOverlay.classList.toggle('hidden', !isLoading);
+        };
+
         // Функция загрузки данных
         async function loadChart(symbol, interval) {
+            const cacheKey = `${symbol}-${interval}`;
+            if (dataCache.has(cacheKey)) {
+                const cachedData = dataCache.get(cacheKey);
+                candleSeries.setData(cachedData);
+                chart.timeScale().fitContent();
+                return;
+            }
+
+            toggleLoading(true);
             try {
-                const response = await fetch(`https://api.binance.com/api/v3/klines?symbol=${symbol}&interval=${interval}&limit=200`);
-                if (!response.ok) throw new Error('Ошибка загрузки данных');
+                const response = await fetch(`${BINANCE_API}?symbol=${symbol}&interval=${interval}&limit=200`, {
+                    headers: { 'Accept': 'application/json' }
+                });
+
+                if (!response.ok) throw new Error(`HTTP error! Status: ${response.status}`);
                 const data = await response.json();
 
+                /** @type {Candle[]} */
                 const candles = data.map(d => ({
-                    time: Math.floor(d[0] / 1000), // Убедимся, что время в секундах
+                    time: Math.floor(d[0] / 1000),
                     open: parseFloat(d[1]),
                     high: parseFloat(d[2]),
                     low: parseFloat(d[3]),
                     close: parseFloat(d[4])
                 }));
 
+                dataCache.set(cacheKey, candles);
                 candleSeries.setData(candles);
                 chart.timeScale().fitContent();
             } catch (error) {
-                console.error('Ошибка:', error);
-                candleSeries.setData([]); // Очистка графика при ошибке
+                console.error('Ошибка загрузки данных:', error);
+                candleSeries.setData([]);
+                alert('Не удалось загрузить данные. Проверьте подключение или попробуйте позже.');
+            } finally {
+                toggleLoading(false);
             }
         }
 
@@ -90,12 +141,20 @@
             });
         });
 
-        // Обработчик изменения размера окна
+        // Дебouncing для resize
+        const debounce = (func, wait) => {
+            let timeout;
+            return (...args) => {
+                clearTimeout(timeout);
+                timeout = setTimeout(() => func(...args), wait);
+            };
+        };
+
         const resizeChart = () => {
-            const chartContainer = document.getElementById('chart');
             chart.resize(chartContainer.clientWidth, chartContainer.clientHeight);
         };
-        window.addEventListener('resize', resizeChart);
+
+        window.addEventListener('resize', debounce(resizeChart, 200));
 
         // Начальная загрузка
         loadChart(currentSymbol, currentInterval);
