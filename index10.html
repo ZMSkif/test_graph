@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Свечной график TradingView</title>
+    <title>Расширенный свечной график TradingView</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://unpkg.com/lightweight-charts/dist/lightweight-charts.standalone.production.js"></script>
     <style>
@@ -21,16 +21,80 @@
             justify-content: center; 
             z-index: 10; 
         }
+        .legend-container {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            z-index: 5;
+            background: rgba(19, 23, 34, 0.7);
+            padding: 8px;
+            border-radius: 4px;
+            font-size: 14px;
+        }
+        .data-info {
+            position: absolute;
+            bottom: 10px;
+            right: 10px;
+            z-index: 5;
+            background: rgba(19, 23, 34, 0.7);
+            padding: 8px;
+            border-radius: 4px;
+            font-size: 12px;
+        }
+        .spinner {
+            border: 4px solid rgba(255, 255, 255, 0.3);
+            border-radius: 50%;
+            border-top: 4px solid #fff;
+            width: 30px;
+            height: 30px;
+            animation: spin 1s linear infinite;
+            margin-right: 10px;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        /* Стили для тултипа */
+        .tooltip {
+            position: absolute;
+            display: none;
+            background: rgba(19, 23, 34, 0.9);
+            color: #fff;
+            border: 1px solid #2a2e39;
+            padding: 8px;
+            border-radius: 4px;
+            font-size: 12px;
+            z-index: 100;
+            pointer-events: none;
+            max-width: 300px;
+        }
+        .tooltip-title {
+            font-weight: bold;
+            margin-bottom: 4px;
+            border-bottom: 1px solid #2a2e39;
+            padding-bottom: 4px;
+        }
+        .tooltip-item {
+            display: flex;
+            justify-content: space-between;
+            margin: 3px 0;
+        }
     </style>
 </head>
 <body class="bg-gray-900 text-white">
     <div class="flex items-center justify-between bg-gray-800 px-4 py-3">
         <div class="text-xl font-semibold">TradingView Chart</div>
-        <select id="symbolSelect" class="bg-gray-700 px-2 py-1 rounded text-white">
-            <option value="BTCUSDT">BTC/USDT</option>
-            <option value="ETHUSDT">ETH/USDT</option>
-            <option value="BNBUSDT">BNB/USDT</option>
-        </select>
+        <div class="flex items-center">
+            <span class="mr-2">Пара:</span>
+            <select id="symbolSelect" class="bg-gray-700 px-2 py-1 rounded text-white">
+                <option value="BTCUSDT">BTC/USDT</option>
+                <option value="ETHUSDT">ETH/USDT</option>
+                <option value="BNBUSDT">BNB/USDT</option>
+                <option value="ADAUSDT">ADA/USDT</option>
+                <option value="SOLUSDT">SOL/USDT</option>
+                <option value="DOGEUSDT">DOGE/USDT</option>
+            </select>
+        </div>
     </div>
     <div class="flex justify-center bg-gray-800 py-2">
         <button class="timeframe-btn mx-1 px-3 py-1 rounded bg-gray-700 hover:bg-blue-500 transition" data-interval="1m">1м</button>
@@ -42,13 +106,19 @@
     </div>
     <div id="chart">
         <div id="loadingOverlay" class="loading-overlay hidden">
-            <div class="text-white text-lg">Загрузка...</div>
+            <div class="flex items-center">
+                <div class="spinner"></div>
+                <div class="text-white text-lg">Загрузка данных...</div>
+            </div>
         </div>
+        <div id="legendContainer" class="legend-container"></div>
+        <div id="dataInfo" class="data-info"></div>
     </div>
+    <div id="tooltip" class="tooltip"></div>
 
     <script type="module">
         // Типизация для данных свечей
-        /** @typedef {{ time: number, open: number, high: number, low: number, close: number }} Candle */
+        /** @typedef {{ time: number, open: number, high: number, low: number, close: number, volume?: number }} Candle */
 
         // Кэш для данных
         const dataCache = new Map();
@@ -56,44 +126,245 @@
         // Инициализация графика
         const chartContainer = document.getElementById('chart');
         const loadingOverlay = document.getElementById('loadingOverlay');
-        const chart = LightweightCharts.createChart(chartContainer, {
-            layout: { background: { color: '#131722' }, textColor: '#d1d4dc' },
-            grid: { vertLines: { color: '#2a2e39' }, horzLines: { color: '#2a2e39' } },
-            crosshair: { mode: LightweightCharts.CrosshairMode.Normal },
-            timeScale: { timeVisible: true, secondsVisible: false, borderColor: '#2a2e39' },
-            localization: { locale: 'ru-RU' }
-        });
+        const legendContainer = document.getElementById('legendContainer');
+        const dataInfo = document.getElementById('dataInfo');
+        const tooltip = document.getElementById('tooltip');
 
-        const candleSeries = chart.addCandlestickSeries({
+        // Настройки графика
+        const chartOptions = {
+            layout: { 
+                background: { type: 'solid', color: '#131722' }, 
+                textColor: '#d1d4dc',
+                fontSize: 12
+            },
+            grid: { 
+                vertLines: { color: '#2a2e39', style: 1 }, 
+                horzLines: { color: '#2a2e39', style: 1 } 
+            },
+            crosshair: { 
+                mode: LightweightCharts.CrosshairMode.Normal,
+                vertLine: { color: '#758696', width: 1, style: 1 },
+                horzLine: { color: '#758696', width: 1, style: 1 }
+            },
+            timeScale: { 
+                timeVisible: true, 
+                secondsVisible: false, 
+                borderColor: '#2a2e39',
+                rightOffset: 5,
+                barSpacing: 10,
+                fixLeftEdge: true
+            },
+            localization: { locale: 'ru-RU' },
+            handleScroll: { mouseWheel: true, pressedMouseMove: true },
+            handleScale: { mouseWheel: true, pinch: true, axisPressedMouseMove: true }
+        };
+
+        const chart = LightweightCharts.createChart(chartContainer, chartOptions);
+
+        // Настройки для свечей
+        const candleSeriesOptions = {
             upColor: '#26a69a',
             downColor: '#ef5350',
             wickUpColor: '#26a69a',
             wickDownColor: '#ef5350',
-            borderVisible: false
+            borderVisible: false,
+            priceFormat: {
+                type: 'price',
+                precision: 2,
+                minMove: 0.01
+            },
+            priceScaleId: 'right'
+        };
+
+        const candleSeries = chart.addCandlestickSeries(candleSeriesOptions);
+
+        // Добавляем объем
+        const volumeSeries = chart.addHistogramSeries({
+            color: '#26a69a',
+            priceFormat: {
+                type: 'volume',
+            },
+            priceScaleId: 'volume',
+            scaleMargins: {
+                top: 0.8,
+                bottom: 0
+            },
         });
 
-        // Прокси для обхода CORS (если нужно)
-        const PROXY_URL = 'https://cors-anywhere.herokuapp.com/';
+        // Настраиваем шкалу объема
+        chart.priceScale('volume').applyOptions({
+            scaleMargins: {
+                top: 0.8,
+                bottom: 0
+            },
+            drawTicks: false
+        });
+
+        // API Binance
         const BINANCE_API = 'https://api.binance.com/api/v3/klines';
+
+        // Функция для форматирования цены
+        function formatPrice(price) {
+            if (typeof price !== 'number') return 'N/A';
+            return new Intl.NumberFormat('ru-RU', {
+                style: 'decimal',
+                minimumFractionDigits: 2,
+                maximumFractionDigits: 2
+            }).format(price);
+        }
+
+        // Функция для форматирования объема
+        function formatVolume(volume) {
+            if (typeof volume !== 'number') return 'N/A';
+            if (volume >= 1000000) {
+                return `${(volume / 1000000).toFixed(2)}M`;
+            } else if (volume >= 1000) {
+                return `${(volume / 1000).toFixed(2)}K`;
+            }
+            return volume.toFixed(2);
+        }
+
+        // Функция для форматирования даты
+        function formatDate(timestamp) {
+            return new Date(timestamp * 1000).toLocaleString('ru-RU', {
+                year: 'numeric',
+                month: 'short',
+                day: 'numeric',
+                hour: '2-digit',
+                minute: '2-digit'
+            });
+        }
+
+        // Функция для обновления легенды
+        function updateLegend(lastPrice, priceChange, percentChange, symbol) {
+            const color = priceChange >= 0 ? '#26a69a' : '#ef5350';
+            const arrow = priceChange >= 0 ? '▲' : '▼';
+            legendContainer.innerHTML = `
+                <div class="text-lg font-bold">${symbol.replace('USDT', '')}/USDT</div>
+                <div class="text-lg" style="color: ${color}">${formatPrice(lastPrice)}</div>
+                <div style="color: ${color}">
+                    ${arrow} ${formatPrice(Math.abs(priceChange))} (${Math.abs(percentChange).toFixed(2)}%)
+                </div>
+            `;
+        }
+
+        // Функция для обновления информации о данных
+        function updateDataInfo(firstTime, lastTime, dataCount) {
+            dataInfo.innerHTML = `
+                <div>Период: ${formatDate(firstTime)} - ${formatDate(lastTime)}</div>
+                <div>Количество свечей: ${dataCount}</div>
+            `;
+        }
 
         // Функция для показа/скрытия загрузки
         const toggleLoading = (isLoading) => {
             loadingOverlay.classList.toggle('hidden', !isLoading);
         };
 
+        // Создаем тултип
+        function showTooltip(param) {
+            if (!param.time || param.point === undefined) {
+                tooltip.style.display = 'none';
+                return;
+            }
+
+            const candleData = candleSeries.dataByIndex(param.index);
+            const volumeData = volumeSeries.dataByIndex(param.index);
+
+            if (!candleData) {
+                tooltip.style.display = 'none';
+                return;
+            }
+
+            const dateStr = formatDate(candleData.time);
+            const pricePrecision = currentSymbol.includes('BTC') ? 2 : 4;
+            
+            let color = candleData.close >= candleData.open ? '#26a69a' : '#ef5350';
+            let change = candleData.close - candleData.open;
+            let percentChange = (change / candleData.open) * 100;
+            
+            tooltip.innerHTML = `
+                <div class="tooltip-title">${dateStr}</div>
+                <div class="tooltip-item">
+                    <span>Открытие:</span>
+                    <span>${candleData.open.toFixed(pricePrecision)}</span>
+                </div>
+                <div class="tooltip-item">
+                    <span>Закрытие:</span>
+                    <span style="color:${color}">${candleData.close.toFixed(pricePrecision)}</span>
+                </div>
+                <div class="tooltip-item">
+                    <span>Максимум:</span>
+                    <span>${candleData.high.toFixed(pricePrecision)}</span>
+                </div>
+                <div class="tooltip-item">
+                    <span>Минимум:</span>
+                    <span>${candleData.low.toFixed(pricePrecision)}</span>
+                </div>
+                <div class="tooltip-item">
+                    <span>Изменение:</span>
+                    <span style="color:${color}">${change >= 0 ? '+' : ''}${change.toFixed(pricePrecision)} (${percentChange.toFixed(2)}%)</span>
+                </div>
+                ${volumeData ? `
+                <div class="tooltip-item">
+                    <span>Объем:</span>
+                    <span>${formatVolume(volumeData.value)}</span>
+                </div>` : ''}
+            `;
+
+            const y = param.point.y;
+            const x = param.point.x;
+            const tooltipWidth = tooltip.clientWidth;
+            const tooltipHeight = tooltip.clientHeight;
+            const chartWidth = chartContainer.clientWidth;
+            const chartHeight = chartContainer.clientHeight;
+
+            // Расположение тултипа
+            let left = x + 20;
+            if (left + tooltipWidth > chartWidth) {
+                left = x - tooltipWidth - 20;
+            }
+            
+            let top = y - tooltipHeight / 2;
+            if (top < 0) {
+                top = 5;
+            } else if (top + tooltipHeight > chartHeight) {
+                top = chartHeight - tooltipHeight - 5;
+            }
+            
+            tooltip.style.left = `${left}px`;
+            tooltip.style.top = `${top}px`;
+            tooltip.style.display = 'block';
+        }
+
+        // Функция скрытия тултипа
+        function hideTooltip() {
+            tooltip.style.display = 'none';
+        }
+
+        // Обработчик движения мыши
+        chart.subscribeCrosshairMove(param => {
+            showTooltip(param);
+        });
+
+        chart.timeScale().subscribeVisibleLogicalRangeChange(() => {
+            hideTooltip();
+        });
+
         // Функция загрузки данных
         async function loadChart(symbol, interval) {
             const cacheKey = `${symbol}-${interval}`;
+            document.title = `${symbol} (${interval}) - TradingView Chart`;
+            
             if (dataCache.has(cacheKey)) {
                 const cachedData = dataCache.get(cacheKey);
-                candleSeries.setData(cachedData);
-                chart.timeScale().fitContent();
+                displayData(cachedData, symbol);
                 return;
             }
 
             toggleLoading(true);
             try {
-                const response = await fetch(`${BINANCE_API}?symbol=${symbol}&interval=${interval}&limit=200`, {
+                const response = await fetch(`${BINANCE_API}?symbol=${symbol}&interval=${interval}&limit=500`, {
                     headers: { 'Accept': 'application/json' }
                 });
 
@@ -106,19 +377,62 @@
                     open: parseFloat(d[1]),
                     high: parseFloat(d[2]),
                     low: parseFloat(d[3]),
-                    close: parseFloat(d[4])
+                    close: parseFloat(d[4]),
+                    volume: parseFloat(d[5])
                 }));
 
                 dataCache.set(cacheKey, candles);
-                candleSeries.setData(candles);
-                chart.timeScale().fitContent();
+                displayData(candles, symbol);
             } catch (error) {
                 console.error('Ошибка загрузки данных:', error);
                 candleSeries.setData([]);
+                volumeSeries.setData([]);
                 alert('Не удалось загрузить данные. Проверьте подключение или попробуйте позже.');
             } finally {
                 toggleLoading(false);
             }
+        }
+
+        // Функция для отображения данных
+        function displayData(candles, symbol) {
+            if (candles.length === 0) return;
+
+            // Устанавливаем данные свечей
+            candleSeries.setData(candles);
+            
+            // Настраиваем формат цены в зависимости от символа
+            const precision = symbol.includes('BTC') ? 2 : 
+                              symbol.includes('ETH') ? 2 : 4;
+            
+            candleSeries.applyOptions({
+                priceFormat: {
+                    type: 'price',
+                    precision: precision,
+                    minMove: 1 / Math.pow(10, precision)
+                }
+            });
+
+            // Устанавливаем данные объема
+            const volumeData = candles.map(c => ({
+                time: c.time,
+                value: c.volume,
+                color: c.close >= c.open ? 'rgba(38, 166, 154, 0.5)' : 'rgba(239, 83, 80, 0.5)'
+            }));
+            volumeSeries.setData(volumeData);
+            
+            // Обновляем легенду
+            const lastCandle = candles[candles.length - 1];
+            const prevCandle = candles[candles.length - 2] || candles[0];
+            const priceChange = lastCandle.close - prevCandle.close;
+            const percentChange = (priceChange / prevCandle.close) * 100;
+            
+            updateLegend(lastCandle.close, priceChange, percentChange, symbol);
+            
+            // Обновляем информацию о данных
+            updateDataInfo(candles[0].time, lastCandle.time, candles.length);
+            
+            // Масштабируем для отображения всех данных
+            chart.timeScale().fitContent();
         }
 
         // Начальные значения
@@ -141,7 +455,15 @@
             });
         });
 
-        // Дебouncing для resize
+        // Функция для обновления размера графика
+        const resizeChart = () => {
+            const width = chartContainer.clientWidth;
+            const height = chartContainer.clientHeight;
+            chart.resize(width, height);
+            hideTooltip();
+        };
+
+        // Debounce функция для resize
         const debounce = (func, wait) => {
             let timeout;
             return (...args) => {
@@ -150,14 +472,30 @@
             };
         };
 
-        const resizeChart = () => {
-            chart.resize(chartContainer.clientWidth, chartContainer.clientHeight);
-        };
+        // Отслеживаем изменение размера окна
+        window.addEventListener('resize', debounce(resizeChart, 100));
 
-        window.addEventListener('resize', debounce(resizeChart, 200));
+        // Функция для подписки на обновления данных в реальном времени
+        async function subscribeToUpdates(symbol, interval) {
+            // В этой функции можно добавить логику для WebSocket подключения
+            // Это будет заглушка для демонстрации
+            console.log(`Подписка на обновления для ${symbol} с интервалом ${interval}`);
+        }
 
-        // Начальная загрузка
-        loadChart(currentSymbol, currentInterval);
+        // Функция инициализации
+        function initialize() {
+            // Загружаем данные
+            loadChart(currentSymbol, currentInterval);
+            
+            // Настраиваем размер
+            resizeChart();
+            
+            // Подписываемся на обновления (заглушка)
+            subscribeToUpdates(currentSymbol, currentInterval);
+        }
+
+        // Запускаем
+        initialize();
     </script>
 </body>
 </html>
