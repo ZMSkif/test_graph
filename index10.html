@@ -71,39 +71,7 @@
     <!-- TradingView Widget Контейнер -->
     <div id="trading-view-widget-container" class="w-full"></div>
     
-    <!-- Контроль графика -->
-    <div class="bg-gray-800 p-2 grid grid-cols-5 gap-1">
-        <button class="chart-tool bg-gray-700 text-xs p-2 rounded flex flex-col items-center" data-tool="indicators">
-            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 12l3-3 3 3 4-4M8 21l4-4 4 4M3 4h18M4 4h16v12a1 1 0 01-1 1H5a1 1 0 01-1-1V4z" />
-            </svg>
-            <span>Индикаторы</span>
-        </button>
-        <button class="chart-tool bg-gray-700 text-xs p-2 rounded flex flex-col items-center" data-tool="drawings">
-            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
-            </svg>
-            <span>Рисование</span>
-        </button>
-        <button class="chart-tool bg-gray-700 text-xs p-2 rounded flex flex-col items-center" data-tool="zoom-in">
-            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0zM10 7v6m4-3h-6" />
-            </svg>
-            <span>Увеличить</span>
-        </button>
-        <button class="chart-tool bg-gray-700 text-xs p-2 rounded flex flex-col items-center" data-tool="zoom-out">
-            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0zM13 10H7" />
-            </svg>
-            <span>Уменьшить</span>
-        </button>
-        <button class="chart-tool bg-gray-700 text-xs p-2 rounded flex flex-col items-center" data-tool="reset">
-            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-            </svg>
-            <span>Сброс</span>
-        </button>
-    </div>
+    <!-- Здесь удалена пользовательская панель инструментов, теперь используются только встроенные инструменты TradingView -->
     
     <!-- Информация о текущей цене -->
     <div class="footer bg-gray-800 p-3 border-t border-gray-700">
@@ -209,13 +177,7 @@
                 widget.setInterval(currentInterval);
             });
             
-            // Обработчики для кнопок инструментов графика
-            document.querySelectorAll('.chart-tool').forEach(button => {
-                button.addEventListener('click', function() {
-                    const tool = this.getAttribute('data-tool');
-                    handleChartTool(tool);
-                });
-            });
+            // Удалены обработчики для кнопок инструментов графика, теперь используются только встроенные инструменты TradingView
         }
         
         // Подключение сокетов для тикеров в бегущей строке
@@ -284,36 +246,7 @@
             };
         }
         
-        // Обработка инструментов графика
-        function handleChartTool(tool) {
-            switch(tool) {
-                case 'indicators':
-                    if (widget && widget.activeChart) {
-                        widget.activeChart().executeActionById('insertIndicator');
-                    }
-                    break;
-                case 'drawings':
-                    if (widget && widget.activeChart) {
-                        widget.activeChart().executeActionById('drawingToolbarAction');
-                    }
-                    break;
-                case 'zoom-in':
-                    if (widget && widget.activeChart) {
-                        widget.activeChart().executeActionById('zoomIn');
-                    }
-                    break;
-                case 'zoom-out':
-                    if (widget && widget.activeChart) {
-                        widget.activeChart().executeActionById('zoomOut');
-                    }
-                    break;
-                case 'reset':
-                    if (widget && widget.activeChart) {
-                        widget.activeChart().executeActionById('reset');
-                    }
-                    break;
-            }
-        }
+        // Удалена функция обработки инструментов графика, теперь используются только встроенные инструменты TradingView
         
         // Конвертация интервала для API Binance
         function convertToInterval(interval) {
