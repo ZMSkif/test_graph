@@ -9,21 +9,21 @@
   <!-- Подключение Lightweight Charts -->
   <script src="https://unpkg.com/lightweight-charts/dist/lightweight-charts.standalone.production.js"></script>
 </head>
-<body class="bg-gray-900 text-white overflow-hidden">
+<body class="bg-gray-900 text-white" style="height: 100vh;">
   <!-- Статус-бар -->
-  <div class="flex justify-between items-center p-2 bg-gray-900">
+  <div class="flex justify-between items-center p-2 bg-gray-800">
     <div class="text-sm">21:49</div>
     <div class="text-sm">Wi-Fi 47%</div>
   </div>
 
-  <!-- Заголовок приложения -->
-  <div class="bg-gray-800 py-3 border-b border-gray-700 text-center">
+  <!-- Заголовок -->
+  <div class="bg-gray-700 py-3 border-b border-gray-600 text-center">
     <h1 class="text-xl font-bold">CryptoView</h1>
   </div>
 
-  <!-- Элементы управления -->
-  <div class="flex justify-between items-center p-4 bg-gray-800">
-    <select id="symbolSelect" class="px-3 py-2 rounded border border-gray-600 bg-gray-900 text-white focus:outline-none">
+  <!-- Панель управления -->
+  <div class="flex justify-between items-center p-4 bg-gray-700">
+    <select id="symbolSelect" class="px-3 py-2 rounded border border-gray-500 bg-gray-800 text-white focus:outline-none">
       <option value="BTCUSDT">BTC/USDT</option>
       <option value="ETHUSDT">ETH/USDT</option>
       <option value="BNBUSDT">BNB/USDT</option>
@@ -31,37 +31,37 @@
       <option value="DOGEUSDT">DOGE/USDT</option>
     </select>
     <div class="flex space-x-1">
-      <button class="timeframe-btn px-3 py-2 border border-gray-600 rounded text-gray-300" data-interval="1m">1м</button>
-      <button class="timeframe-btn px-3 py-2 border border-gray-600 rounded text-gray-300" data-interval="5m">5м</button>
-      <button class="timeframe-btn active px-3 py-2 border border-gray-600 rounded bg-blue-500 text-white" data-interval="15m">15м</button>
-      <button class="timeframe-btn px-3 py-2 border border-gray-600 rounded text-gray-300" data-interval="1h">1ч</button>
-      <button class="timeframe-btn px-3 py-2 border border-gray-600 rounded text-gray-300" data-interval="4h">4ч</button>
-      <button class="timeframe-btn px-3 py-2 border border-gray-600 rounded text-gray-300" data-interval="1d">1д</button>
+      <button class="timeframe-btn px-3 py-2 border border-gray-500 rounded text-gray-300" data-interval="1m">1м</button>
+      <button class="timeframe-btn px-3 py-2 border border-gray-500 rounded text-gray-300" data-interval="5m">5м</button>
+      <button class="timeframe-btn active px-3 py-2 border border-gray-500 rounded bg-blue-600 text-white" data-interval="15m">15м</button>
+      <button class="timeframe-btn px-3 py-2 border border-gray-500 rounded text-gray-300" data-interval="1h">1ч</button>
+      <button class="timeframe-btn px-3 py-2 border border-gray-500 rounded text-gray-300" data-interval="4h">4ч</button>
+      <button class="timeframe-btn px-3 py-2 border border-gray-500 rounded text-gray-300" data-interval="1d">1д</button>
     </div>
   </div>
 
   <!-- Контейнер для графика -->
-  <div id="chart" class="relative h-[calc(100%-100px)] w-full">
-    <div class="absolute top-4 left-4 bg-gray-800 bg-opacity-70 backdrop-blur-md p-3 rounded border border-gray-700 z-10">
+  <div id="chart" class="relative" style="height: calc(100% - 100px);">
+    <div class="absolute top-4 left-4 bg-gray-800 bg-opacity-75 backdrop-blur-md p-3 rounded border border-gray-600 z-10">
       <div class="symbol-name text-base font-semibold">BTC/USDT</div>
       <div class="current-price text-2xl font-bold">---.--</div>
       <div class="price-change text-base font-medium">0.00 (0.00%)</div>
     </div>
-    <div id="statusMessage" class="absolute bottom-5 left-1/2 transform -translate-x-1/2 bg-gray-800 bg-opacity-70 backdrop-blur-md px-4 py-2 rounded-full text-sm border border-gray-700">
+    <div id="statusMessage" class="absolute bottom-5 left-1/2 transform -translate-x-1/2 bg-gray-800 bg-opacity-75 backdrop-blur-md px-4 py-2 rounded-full text-sm border border-gray-600">
       Загрузка данных...
     </div>
   </div>
 
   <script>
     (function() {
-      // Переменные для управления состоянием
+      // Инициализация переменных
       let chart, candleSeries;
       let currentSymbol = 'BTCUSDT';
       let currentInterval = '15m';
       let webSocket = null;
       let lastCandle = null;
-      
-      // Элементы DOM
+
+      // DOM-элементы
       const elements = {
         chartContainer: document.getElementById('chart'),
         symbolName: document.querySelector('.symbol-name'),
@@ -72,7 +72,7 @@
         timeframeButtons: document.querySelectorAll('.timeframe-btn')
       };
 
-      // Инициализация графика
+      // Функция инициализации графика
       function initChart() {
         const chartOptions = {
           width: elements.chartContainer.clientWidth,
@@ -109,9 +109,7 @@
         });
 
         window.addEventListener('resize', () => {
-          if (chart) {
-            chart.resize(elements.chartContainer.clientWidth, elements.chartContainer.clientHeight);
-          }
+          chart.resize(elements.chartContainer.clientWidth, elements.chartContainer.clientHeight);
         });
       }
 
@@ -128,7 +126,6 @@
           if (!data || !Array.isArray(data) || data.length === 0) {
             throw new Error('Получены некорректные данные');
           }
-          // Преобразование данных для графика
           const candles = data.map(item => ({
             time: Math.floor(item[0] / 1000),
             open: parseFloat(item[1]),
@@ -149,7 +146,7 @@
         }
       }
 
-      // Подключение к Binance WebSocket для live-обновлений
+      // Подключение к Binance WebSocket для live‑данных
       function connectWebSocket() {
         if (webSocket) {
           webSocket.close();
@@ -173,6 +170,7 @@
                 low: parseFloat(kline.l),
                 close: parseFloat(kline.c)
               };
+              // Обновляем последнюю свечу или добавляем новую
               if (lastCandle && candle.time === lastCandle.time) {
                 candleSeries.update(candle);
               } else {
@@ -197,7 +195,7 @@
         };
       }
 
-      // Обновление информации о цене
+      // Обновление информации о цене в оверлее
       function updatePriceInfo(candle) {
         if (!candle) return;
         const precision = getPrecisionForSymbol(currentSymbol);
@@ -213,7 +211,7 @@
           : 'price-change text-red-500 font-medium';
       }
 
-      // Определение точности отображения цены
+      // Определение точности цены
       function getPrecisionForSymbol(symbol) {
         if (symbol.includes('BTC') || symbol.includes('ETH')) return 2;
         return 4;
@@ -227,7 +225,7 @@
         }).format(price);
       }
 
-      // Отображение статусного сообщения
+      // Управление статусным сообщением
       function setStatus(message, show = true) {
         elements.statusMessage.textContent = message;
         elements.statusMessage.style.display = show ? 'block' : 'none';
@@ -247,8 +245,8 @@
       function handleIntervalChange(event) {
         const newInterval = event.target.getAttribute('data-interval');
         if (newInterval !== currentInterval) {
-          elements.timeframeButtons.forEach(btn => btn.classList.remove('bg-blue-500', 'text-white'));
-          event.target.classList.add('bg-blue-500', 'text-white');
+          elements.timeframeButtons.forEach(btn => btn.classList.remove('bg-blue-600', 'text-white'));
+          event.target.classList.add('bg-blue-600', 'text-white');
           currentInterval = newInterval;
           loadHistoricalData();
         }
