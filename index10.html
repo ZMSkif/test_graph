@@ -3,13 +3,11 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Мобильная Трейдинг Платформа</title>
+    <title>TradeView</title>
     <!-- Tailwind CSS -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/tailwindcss/2.2.19/tailwind.min.js"></script>
     <!-- TradingView Lightweight Charts -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/lightweight-charts/3.8.0/lightweight-charts.standalone.production.min.js"></script>
-    <!-- TradingView Widget -->
-    <script type="text/javascript" src="https://s3.tradingview.com/tv.js"></script>
     <style>
         body {
             touch-action: manipulation;
@@ -17,84 +15,203 @@
             height: 100vh;
             width: 100vw;
             overflow: hidden;
+            background-color: black;
+            color: white;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
         }
-        .ticker-slide {
-            animation: slide 20s linear infinite;
+        
+        .ticker-slider {
+            overflow-x: auto;
+            white-space: nowrap;
+            scrollbar-width: none;
+            -ms-overflow-style: none;
         }
-        @keyframes slide {
-            0% { transform: translateX(100%); }
-            100% { transform: translateX(-100%); }
+        
+        .ticker-slider::-webkit-scrollbar {
+            display: none;
         }
-        #trading-view-widget-container {
-            height: 60vh;
+        
+        .chart-container {
+            height: calc(100vh - 260px);
+            width: 100%;
+            position: relative;
+        }
+        
+        .pair-button {
+            background-color: #2b2b2b;
+            border-radius: 8px;
+            padding: 0.5rem 0.75rem;
+            display: inline-flex;
+            align-items: center;
+            font-weight: 500;
+        }
+        
+        .pair-button span.arrow {
+            margin-left: 0.5rem;
+            display: inline-block;
+            width: 0;
+            height: 0;
+            border-left: 5px solid transparent;
+            border-right: 5px solid transparent;
+            border-top: 5px solid #4d9af7;
+        }
+        
+        .bottom-info {
+            border-top: 1px solid #333;
+            padding: 0.75rem 1rem;
+        }
+        
+        .timeframe-button {
+            background-color: transparent;
+            color: #fff;
+            border: none;
+            padding: 0.25rem 0.5rem;
+            margin-right: 0.5rem;
+        }
+        
+        .timeframe-button.active {
+            background-color: #2a2a2a;
+            border-radius: 4px;
+        }
+        
+        .chart-tools {
+            display: flex;
+            background-color: #1b1b1b;
+            padding: 0.5rem;
+            border-bottom: 1px solid #333;
+        }
+        
+        .info-value {
+            font-size: 1.25rem;
+            font-weight: 500;
+        }
+        
+        .info-label {
+            font-size: 0.875rem;
+            color: #9e9e9e;
         }
     </style>
 </head>
-<body class="bg-gray-900 text-white">
+<body>
     <!-- Заголовок -->
-    <header class="bg-gray-800 px-4 py-3 flex justify-between items-center shadow-md">
-        <div class="flex items-center">
-            <h1 class="text-xl font-bold">Trade<span class="text-indigo-500">View</span></h1>
-        </div>
-        <div class="flex space-x-3">
-            <select id="symbol-selector" class="bg-gray-700 text-white rounded-md px-2 py-1 text-sm">
-                <option value="BTCUSDT">BTC/USDT</option>
-                <option value="ETHUSDT">ETH/USDT</option>
-                <option value="BNBUSDT">BNB/USDT</option>
-                <option value="SOLUSDT">SOL/USDT</option>
-                <option value="ADAUSDT">ADA/USDT</option>
-                <option value="DOGEUSDT">DOGE/USDT</option>
-            </select>
-            <select id="interval-selector" class="bg-gray-700 text-white rounded-md px-2 py-1 text-sm">
-                <option value="1">1m</option>
-                <option value="5">5m</option>
-                <option value="15">15m</option>
-                <option value="60">1h</option>
-                <option value="240">4h</option>
-                <option value="D">1d</option>
-            </select>
-        </div>
+    <header class="px-4 py-3 flex items-center">
+        <h1 class="text-3xl font-bold">TradeView</h1>
     </header>
     
-    <!-- Бегущая строка с ценами -->
-    <div class="bg-gray-800 border-t border-b border-gray-700 overflow-hidden whitespace-nowrap py-1">
-        <div class="ticker-slide inline-block">
-            <span class="mx-2">BTC/USDT: <span id="btc-price" class="font-semibold">--</span></span>
-            <span class="mx-2">ETH/USDT: <span id="eth-price" class="font-semibold">--</span></span>
-            <span class="mx-2">BNB/USDT: <span id="bnb-price" class="font-semibold">--</span></span>
-            <span class="mx-2">SOL/USDT: <span id="sol-price" class="font-semibold">--</span></span>
-            <span class="mx-2">ADA/USDT: <span id="ada-price" class="font-semibold">--</span></span>
-            <span class="mx-2">DOGE/USDT: <span id="doge-price" class="font-semibold">--</span></span>
+    <!-- Селектор пары и тикеры -->
+    <div class="px-4 pb-2">
+        <div class="flex items-center space-x-2 mb-2">
+            <button id="pair-selector" class="pair-button text-blue-400">
+                BTC/USDT
+                <span class="arrow"></span>
+            </button>
+            <button id="interval-selector" class="pair-button text-blue-400">
+                1m
+                <span class="arrow"></span>
+            </button>
+        </div>
+        
+        <div class="ticker-slider pb-2">
+            <div id="tickers" class="inline-block">
+                <span class="pr-6">BTC/USDT: <span id="btc-price" class="font-medium">--</span></span>
+                <span class="pr-6">ETH/USDT: <span id="eth-price" class="font-medium">--</span></span>
+                <span class="pr-6">BNB/USDT: <span id="bnb-price" class="font-medium">--</span></span>
+                <span class="pr-6">ADA/USDT: <span id="ada-price" class="font-medium">--</span></span>
+                <span class="pr-6">DOGE/USDT: <span id="doge-price" class="font-medium">--</span></span>
+            </div>
         </div>
     </div>
     
-    <!-- TradingView Widget Контейнер -->
-    <div id="trading-view-widget-container" class="w-full"></div>
+    <!-- Панель инструментов графика -->
+    <div class="chart-tools">
+        <button id="timeframe-1m" class="timeframe-button active">1M</button>
+        <button id="timeframe-5m" class="timeframe-button">5M</button>
+        <button id="timeframe-15m" class="timeframe-button">15M</button>
+        <button id="timeframe-1h" class="timeframe-button">1H</button>
+        <button id="timeframe-4h" class="timeframe-button">4H</button>
+        <button id="timeframe-1d" class="timeframe-button">1D</button>
+        <div class="ml-auto flex items-center">
+            <button id="chart-type" class="mr-4">
+                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M3 3v18h18"></path>
+                    <path d="M7 16h2v-6H7v6zm8 0h2V8h-2v8zm-4 0h2v-2h-2v2z"></path>
+                </svg>
+            </button>
+            <button id="indicators-button">
+                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M2 12h2M7 12h15M8 6h7M5 18h10"></path>
+                </svg>
+            </button>
+        </div>
+    </div>
     
-    <!-- Здесь удалена пользовательская панель инструментов, теперь используются только встроенные инструменты TradingView -->
+    <!-- График -->
+    <div id="chart-container" class="chart-container"></div>
     
-    <!-- Информация о текущей цене -->
-    <div class="footer bg-gray-800 p-3 border-t border-gray-700">
+    <!-- Информация о цене и объеме -->
+    <div class="bottom-info">
         <div class="grid grid-cols-3 gap-4">
-            <div class="text-center">
-                <div class="text-xs text-gray-400">Цена</div>
-                <div id="current-price" class="text-lg font-bold">--.--</div>
+            <div>
+                <div class="info-label">Цена</div>
+                <div id="current-price" class="info-value">--.--</div>
             </div>
-            <div class="text-center">
-                <div class="text-xs text-gray-400">24ч %</div>
-                <div id="price-change" class="text-lg">--.--</div>
+            <div>
+                <div class="info-label">24ч %</div>
+                <div id="price-change" class="info-value">--.--</div>
             </div>
-            <div class="text-center">
-                <div class="text-xs text-gray-400">Объем 24ч</div>
-                <div id="volume" class="text-lg">--.--</div>
+            <div>
+                <div class="info-label">Объем 24ч</div>
+                <div id="volume" class="info-value">--.--</div>
             </div>
         </div>
     </div>
     
-    <!-- Скрипт инициализации -->
+    <!-- Селектор монет (скрытый по умолчанию) -->
+    <div id="pair-dropdown" class="fixed inset-0 z-50 bg-black bg-opacity-80 flex-col items-center justify-center hidden">
+        <div class="bg-gray-900 w-11/12 mx-auto rounded-lg max-h-96 overflow-y-auto">
+            <div class="p-4 border-b border-gray-800 flex justify-between items-center">
+                <h3 class="text-lg font-medium">Выберите пару</h3>
+                <button id="close-pair-dropdown" class="text-gray-400">✕</button>
+            </div>
+            <div class="p-2">
+                <div class="grid grid-cols-1 gap-2">
+                    <button class="pair-item text-left p-3 hover:bg-gray-800 rounded" data-symbol="BTCUSDT">BTC/USDT</button>
+                    <button class="pair-item text-left p-3 hover:bg-gray-800 rounded" data-symbol="ETHUSDT">ETH/USDT</button>
+                    <button class="pair-item text-left p-3 hover:bg-gray-800 rounded" data-symbol="BNBUSDT">BNB/USDT</button>
+                    <button class="pair-item text-left p-3 hover:bg-gray-800 rounded" data-symbol="SOLUSDT">SOL/USDT</button>
+                    <button class="pair-item text-left p-3 hover:bg-gray-800 rounded" data-symbol="ADAUSDT">ADA/USDT</button>
+                    <button class="pair-item text-left p-3 hover:bg-gray-800 rounded" data-symbol="DOGEUSDT">DOGE/USDT</button>
+                    <button class="pair-item text-left p-3 hover:bg-gray-800 rounded" data-symbol="XRPUSDT">XRP/USDT</button>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Селектор интервалов (скрытый по умолчанию) -->
+    <div id="interval-dropdown" class="fixed inset-0 z-50 bg-black bg-opacity-80 flex-col items-center justify-center hidden">
+        <div class="bg-gray-900 w-11/12 mx-auto rounded-lg overflow-hidden">
+            <div class="p-4 border-b border-gray-800 flex justify-between items-center">
+                <h3 class="text-lg font-medium">Выберите интервал</h3>
+                <button id="close-interval-dropdown" class="text-gray-400">✕</button>
+            </div>
+            <div class="p-2">
+                <div class="grid grid-cols-2 gap-2">
+                    <button class="interval-item p-3 hover:bg-gray-800 rounded" data-interval="1">1 минута</button>
+                    <button class="interval-item p-3 hover:bg-gray-800 rounded" data-interval="5">5 минут</button>
+                    <button class="interval-item p-3 hover:bg-gray-800 rounded" data-interval="15">15 минут</button>
+                    <button class="interval-item p-3 hover:bg-gray-800 rounded" data-interval="60">1 час</button>
+                    <button class="interval-item p-3 hover:bg-gray-800 rounded" data-interval="240">4 часа</button>
+                    <button class="interval-item p-3 hover:bg-gray-800 rounded" data-interval="D">1 день</button>
+                </div>
+            </div>
+        </div>
+    </div>
+    
     <script>
         // Глобальные переменные
-        let widget;
+        let chart;
+        let candleSeries;
+        let volumeSeries;
         let currentSymbol = 'BTCUSDT';
         let currentInterval = '1';
         let socketTickersList = {};
@@ -102,85 +219,209 @@
         
         // Инициализация при загрузке страницы
         document.addEventListener('DOMContentLoaded', function() {
-            initTradingViewWidget();
+            initChart();
             setupEventListeners();
             connectTickerSockets();
-            connectMainSocket();
+            loadHistoricalData();
         });
         
-        // Инициализация виджета TradingView
-        function initTradingViewWidget() {
-            widget = new TradingView.widget({
-                container_id: 'trading-view-widget-container',
-                symbol: 'BINANCE:' + currentSymbol,
-                interval: currentInterval,
-                timezone: 'Etc/UTC',
-                theme: 'dark',
-                style: '1',
-                locale: 'ru',
-                toolbar_bg: '#222222',
-                enable_publishing: false,
-                hide_top_toolbar: false,
-                hide_legend: true,
-                save_image: false,
-                studies: [
-                    "BB@tv-basicstudies",
-                    "MASimple@tv-basicstudies",
-                    "VWAP@tv-basicstudies"
-                ],
-                show_popup_button: true,
-                popup_width: '1000',
-                popup_height: '650',
-                withdateranges: true,
-                disabled_features: [
-                    "use_localstorage_for_settings",
-                    "volume_force_overlay",
-                    "left_toolbar",
-                    "header_symbol_search",
-                    "header_compare",
-                    "header_undo_redo",
-                    "header_screenshot",
-                    "timeframes_toolbar",
-                    "go_to_date"
-                ],
-                enabled_features: [
-                    "save_chart_properties_to_local_storage"
-                ],
-                charts_storage_api_version: "1.1",
-                client_id: 'mobile_trading_app',
-                user_id: 'public_user',
-                fullscreen: false,
-                autosize: true,
-                allow_symbol_change: true,
-                container_border_color: '#555',
-                loading_screen: {
-                    backgroundColor: '#151924',
-                    foregroundColor: '#3f51b5'
+        // Инициализация графика
+        function initChart() {
+            const chartContainer = document.getElementById('chart-container');
+            
+            // Создаем график
+            chart = LightweightCharts.createChart(chartContainer, {
+                width: chartContainer.clientWidth,
+                height: chartContainer.clientHeight,
+                layout: {
+                    backgroundColor: '#000000',
+                    textColor: '#d1d4dc',
+                },
+                grid: {
+                    vertLines: {
+                        color: 'rgba(42, 46, 57, 0.5)',
+                    },
+                    horzLines: {
+                        color: 'rgba(42, 46, 57, 0.5)',
+                    },
+                },
+                crosshair: {
+                    mode: LightweightCharts.CrosshairMode.Normal,
+                },
+                rightPriceScale: {
+                    borderColor: 'rgba(197, 203, 206, 0.8)',
+                },
+                timeScale: {
+                    borderColor: 'rgba(197, 203, 206, 0.8)',
+                    timeVisible: true,
+                },
+            });
+            
+            // Создаем серию свечей
+            candleSeries = chart.addCandlestickSeries({
+                upColor: '#26a69a',
+                downColor: '#ef5350',
+                borderVisible: false,
+                wickUpColor: '#26a69a',
+                wickDownColor: '#ef5350',
+            });
+            
+            // Добавляем объемы
+            volumeSeries = chart.addHistogramSeries({
+                color: '#26a69a',
+                priceFormat: {
+                    type: 'volume',
+                },
+                priceScaleId: '',
+                scaleMargins: {
+                    top: 0.8,
+                    bottom: 0,
+                },
+            });
+            
+            // Добавим Bollinger Bands (пример индикатора)
+            let upperBandSeries = chart.addLineSeries({
+                color: 'rgba(38, 166, 154, 0.5)',
+                lineWidth: 1,
+            });
+            
+            let middleBandSeries = chart.addLineSeries({
+                color: 'rgba(255, 255, 255, 0.5)',
+                lineWidth: 1,
+            });
+            
+            let lowerBandSeries = chart.addLineSeries({
+                color: 'rgba(239, 83, 80, 0.5)',
+                lineWidth: 1,
+            });
+            
+            // Подгоняем размер при изменении окна
+            window.addEventListener('resize', () => {
+                if (chart) {
+                    chart.resize(
+                        chartContainer.clientWidth,
+                        chartContainer.clientHeight
+                    );
                 }
             });
         }
         
         // Настройка обработчиков событий
         function setupEventListeners() {
-            // Изменение символа
-            document.getElementById('symbol-selector').addEventListener('change', function() {
-                currentSymbol = this.value;
-                widget.setSymbol('BINANCE:' + currentSymbol, function() {
-                    console.log('Symbol changed to ' + currentSymbol);
+            // Обработчик для селектора пары
+            document.getElementById('pair-selector').addEventListener('click', function() {
+                document.getElementById('pair-dropdown').classList.remove('hidden');
+                document.getElementById('pair-dropdown').classList.add('flex');
+            });
+            
+            // Закрытие селектора пары
+            document.getElementById('close-pair-dropdown').addEventListener('click', function() {
+                document.getElementById('pair-dropdown').classList.add('hidden');
+                document.getElementById('pair-dropdown').classList.remove('flex');
+            });
+            
+            // Обработчик для выбора пары
+            document.querySelectorAll('.pair-item').forEach(item => {
+                item.addEventListener('click', function() {
+                    const symbol = this.getAttribute('data-symbol');
+                    const displaySymbol = symbol.replace('USDT', '/USDT');
+                    document.getElementById('pair-selector').textContent = displaySymbol;
+                    
+                    document.getElementById('pair-dropdown').classList.add('hidden');
+                    document.getElementById('pair-dropdown').classList.remove('flex');
+                    
+                    currentSymbol = symbol;
+                    resetChart();
+                    loadHistoricalData();
                 });
-                updatePriceInfo();
             });
             
-            // Изменение интервала
-            document.getElementById('interval-selector').addEventListener('change', function() {
-                currentInterval = this.value;
-                widget.setInterval(currentInterval);
+            // Обработчик для селектора интервала
+            document.getElementById('interval-selector').addEventListener('click', function() {
+                document.getElementById('interval-dropdown').classList.remove('hidden');
+                document.getElementById('interval-dropdown').classList.add('flex');
             });
             
-            // Удалены обработчики для кнопок инструментов графика, теперь используются только встроенные инструменты TradingView
+            // Закрытие селектора интервала
+            document.getElementById('close-interval-dropdown').addEventListener('click', function() {
+                document.getElementById('interval-dropdown').classList.add('hidden');
+                document.getElementById('interval-dropdown').classList.remove('flex');
+            });
+            
+            // Обработчик для выбора интервала
+            document.querySelectorAll('.interval-item').forEach(item => {
+                item.addEventListener('click', function() {
+                    const interval = this.getAttribute('data-interval');
+                    let displayInterval;
+                    
+                    switch(interval) {
+                        case '1': displayInterval = '1m'; break;
+                        case '5': displayInterval = '5m'; break;
+                        case '15': displayInterval = '15m'; break;
+                        case '60': displayInterval = '1h'; break;
+                        case '240': displayInterval = '4h'; break;
+                        case 'D': displayInterval = '1d'; break;
+                        default: displayInterval = '1m';
+                    }
+                    
+                    document.getElementById('interval-selector').textContent = displayInterval;
+                    
+                    document.getElementById('interval-dropdown').classList.add('hidden');
+                    document.getElementById('interval-dropdown').classList.remove('flex');
+                    
+                    // Обновляем активную кнопку timeframe
+                    document.querySelectorAll('.timeframe-button').forEach(btn => {
+                        btn.classList.remove('active');
+                    });
+                    
+                    const timeframeButton = document.getElementById(`timeframe-${displayInterval}`);
+                    if (timeframeButton) {
+                        timeframeButton.classList.add('active');
+                    }
+                    
+                    currentInterval = interval;
+                    resetChart();
+                    loadHistoricalData();
+                });
+            });
+            
+            // Обработчики для кнопок timeframe
+            document.querySelectorAll('.timeframe-button').forEach(button => {
+                button.addEventListener('click', function() {
+                    // Сначала удаляем класс active у всех кнопок
+                    document.querySelectorAll('.timeframe-button').forEach(btn => {
+                        btn.classList.remove('active');
+                    });
+                    
+                    // Добавляем класс active к нажатой кнопке
+                    this.classList.add('active');
+                    
+                    // Извлекаем интервал из ID кнопки
+                    const timeframeId = this.id.replace('timeframe-', '');
+                    let interval;
+                    
+                    switch(timeframeId) {
+                        case '1m': interval = '1'; break;
+                        case '5m': interval = '5'; break;
+                        case '15m': interval = '15'; break;
+                        case '1h': interval = '60'; break;
+                        case '4h': interval = '240'; break;
+                        case '1d': interval = 'D'; break;
+                        default: interval = '1';
+                    }
+                    
+                    // Обновляем текст в селекторе интервала
+                    document.getElementById('interval-selector').textContent = timeframeId;
+                    
+                    // Обновляем текущий интервал и перезагружаем график
+                    currentInterval = interval;
+                    resetChart();
+                    loadHistoricalData();
+                });
+            });
         }
         
-        // Подключение сокетов для тикеров в бегущей строке
+        // Подключение сокетов для тикеров
         function connectTickerSockets() {
             const symbols = ['btcusdt', 'ethusdt', 'bnbusdt', 'solusdt', 'adausdt', 'dogeusdt'];
             
@@ -197,7 +438,7 @@
                     const priceElement = document.getElementById(`${symbolShort}-price`);
                     if (priceElement) {
                         priceElement.textContent = price;
-                        priceElement.className = priceChange >= 0 ? 'font-semibold text-green-500' : 'font-semibold text-red-500';
+                        priceElement.className = priceChange >= 0 ? 'font-medium text-green-500' : 'font-medium text-red-500';
                     }
                     
                     // Сохраняем данные символа
@@ -221,36 +462,104 @@
             });
         }
         
-        // Подключение основного сокета для текущей пары
-        function connectMainSocket() {
+        // Загрузка исторических данных
+        function loadHistoricalData() {
+            // Преобразуем интервал для API Binance
+            const binanceInterval = convertToBinanceInterval(currentInterval);
+            
+            fetch(`https://api.binance.com/api/v3/klines?symbol=${currentSymbol}&interval=${binanceInterval}&limit=300`)
+                .then(response => response.json())
+                .then(data => {
+                    const candles = [];
+                    const volumes = [];
+                    
+                    // Рассчитаем BB (простой пример, в реальности нужен более сложный расчет)
+                    const closePrices = data.map(d => parseFloat(d[4]));
+                    const bbandsResult = calculateBollingerBands(closePrices, 20, 2);
+                    
+                    for (let i = 0; i < data.length; i++) {
+                        const time = data[i][0] / 1000;
+                        
+                        candles.push({
+                            time: time,
+                            open: parseFloat(data[i][1]),
+                            high: parseFloat(data[i][2]),
+                            low: parseFloat(data[i][3]),
+                            close: parseFloat(data[i][4])
+                        });
+                        
+                        volumes.push({
+                            time: time,
+                            value: parseFloat(data[i][5]),
+                            color: parseFloat(data[i][4]) >= parseFloat(data[i][1]) ? 'rgba(38, 166, 154, 0.5)' : 'rgba(239, 83, 80, 0.5)'
+                        });
+                    }
+                    
+                    // Устанавливаем данные на график
+                    candleSeries.setData(candles);
+                    volumeSeries.setData(volumes);
+                    
+                    // Обновляем информацию о цене
+                    if (candles.length > 0) {
+                        const currentPrice = candles[candles.length - 1].close;
+                        const startPrice = candles[0].close;
+                        updatePriceInfo(currentPrice, startPrice, parseFloat(data[data.length - 1][5]));
+                    }
+                    
+                    // Подключаем основной сокет для обновления графика
+                    connectMainSocket(binanceInterval);
+                })
+                .catch(error => {
+                    console.error('Error loading historical data:', error);
+                });
+        }
+        
+        // Подключение основного сокета для обновления графика
+        function connectMainSocket(interval) {
             const symbol = currentSymbol.toLowerCase();
-            const interval = convertToInterval(currentInterval);
             
-            const socket = new WebSocket(`wss://stream.binance.com:9443/ws/${symbol}@kline_${interval}`);
+            // Закрываем предыдущий сокет, если он существует
+            if (window.mainSocket && window.mainSocket.readyState === WebSocket.OPEN) {
+                window.mainSocket.close();
+            }
             
-            socket.onmessage = function(event) {
+            const wsUrl = `wss://stream.binance.com:9443/ws/${symbol}@kline_${interval}`;
+            
+            window.mainSocket = new WebSocket(wsUrl);
+            
+            window.mainSocket.onmessage = function(event) {
                 const data = JSON.parse(event.data);
                 if (data.k) {
                     const candle = {
-                        time: data.k.t,
+                        time: data.k.t / 1000,
                         open: parseFloat(data.k.o),
                         high: parseFloat(data.k.h),
                         low: parseFloat(data.k.l),
-                        close: parseFloat(data.k.c),
-                        volume: parseFloat(data.k.v)
+                        close: parseFloat(data.k.c)
                     };
                     
-                    // Обновляем информацию о текущей цене
-                    document.getElementById('current-price').textContent = candle.close.toFixed(2);
+                    const volume = {
+                        time: data.k.t / 1000,
+                        value: parseFloat(data.k.v),
+                        color: parseFloat(data.k.c) >= parseFloat(data.k.o) ? 'rgba(38, 166, 154, 0.5)' : 'rgba(239, 83, 80, 0.5)'
+                    };
+                    
+                    candleSeries.update(candle);
+                    volumeSeries.update(volume);
+                    
+                    // Обновляем информацию о цене
+                    updatePriceInfo(candle.close, null, parseFloat(data.k.v));
                 }
+            };
+            
+            window.mainSocket.onerror = function(error) {
+                console.error('Main WebSocket error:', error);
             };
         }
         
-        // Удалена функция обработки инструментов графика, теперь используются только встроенные инструменты TradingView
-        
-        // Конвертация интервала для API Binance
-        function convertToInterval(interval) {
-            switch(interval) {
+        // Преобразование интервала для API Binance
+        function convertToBinanceInterval(interval) {
+            switch (interval) {
                 case '1': return '1m';
                 case '5': return '5m';
                 case '15': return '15m';
@@ -262,41 +571,84 @@
         }
         
         // Обновление информации о цене
-        function updatePriceInfo() {
-            const symbol = currentSymbol.toLowerCase();
+        function updatePriceInfo(currentPrice, startPrice = null, volume = null) {
+            // Устанавливаем текущую цену
+            document.getElementById('current-price').textContent = currentPrice.toFixed(2);
             
+            // Обновляем информацию из сохраненных данных
+            const symbol = currentSymbol.toLowerCase();
             if (symbolData[symbol]) {
                 const data = symbolData[symbol];
                 
-                // Обновление цены
-                document.getElementById('current-price').textContent = data.price;
-                
                 // Обновление изменения цены
                 const priceChangeElem = document.getElementById('price-change');
-                priceChangeElem.textContent = data.priceChange.toFixed(2) + '%';
+                const priceChange = data.priceChange;
+                priceChangeElem.textContent = priceChange.toFixed(2) + '%';
                 
-                if (data.priceChange >= 0) {
-                    priceChangeElem.className = 'text-lg text-green-500';
+                if (priceChange >= 0) {
+                    priceChangeElem.className = 'info-value text-green-500';
                 } else {
-                    priceChangeElem.className = 'text-lg text-red-500';
+                    priceChangeElem.className = 'info-value text-red-500';
                 }
                 
                 // Обновление объема
-                let volume = data.volume;
-                let volumeText = '';
-                
-                if (volume > 1000000000) {
-                    volumeText = (volume / 1000000000).toFixed(2) + 'B';
-                } else if (volume > 1000000) {
-                    volumeText = (volume / 1000000).toFixed(2) + 'M';
-                } else if (volume > 1000) {
-                    volumeText = (volume / 1000).toFixed(2) + 'K';
-                } else {
-                    volumeText = volume.toFixed(2);
-                }
-                
-                document.getElementById('volume').textContent = volumeText;
+                formatVolume(data.volume);
             }
+        }
+        
+        // Форматирование объема
+        function formatVolume(volume) {
+            let volumeText = '';
+            
+            if (volume > 1000000000) {
+                volumeText = (volume / 1000000000).toFixed(2) + 'B';
+            } else if (volume > 1000000) {
+                volumeText = (volume / 1000000).toFixed(2) + 'M';
+            } else if (volume > 1000) {
+                volumeText = (volume / 1000).toFixed(2) + 'K';
+            } else {
+                volumeText = volume.toFixed(2);
+            }
+            
+            document.getElementById('volume').textContent = volumeText;
+        }
+        
+        // Сброс графика
+        function resetChart() {
+            candleSeries.setData([]);
+            volumeSeries.setData([]);
+        }
+        
+        // Расчет полос Боллинджера (упрощенная версия)
+        function calculateBollingerBands(prices, period = 20, multiplier = 2) {
+            const result = {
+                upper: [],
+                middle: [],
+                lower: []
+            };
+            
+            if (prices.length < period) {
+                return result;
+            }
+            
+            for (let i = period - 1; i < prices.length; i++) {
+                const slice = prices.slice(i - period + 1, i + 1);
+                const sum = slice.reduce((a, b) => a + b, 0);
+                const sma = sum / period;
+                
+                // Расчет среднеквадратичного отклонения
+                let squaredDifferencesSum = 0;
+                for (const price of slice) {
+                    squaredDifferencesSum += Math.pow(price - sma, 2);
+                }
+                const stdDev = Math.sqrt(squaredDifferencesSum / period);
+                
+                result.middle.push({ time: i, value: sma });
+                result.upper.push({ time: i, value: sma + multiplier * stdDev });
+                result.lower.push({ time: i, value: sma - multiplier * stdDev });
+            }
+            
+            return result;
         }
         
         // Очистка ресурсов при закрытии страницы
@@ -306,6 +658,10 @@
                 if (socketTickersList[symbol] && socketTickersList[symbol].readyState === WebSocket.OPEN) {
                     socketTickersList[symbol].close();
                 }
+            }
+            
+            if (window.mainSocket && window.mainSocket.readyState === WebSocket.OPEN) {
+                window.mainSocket.close();
             }
         });
     </script>
