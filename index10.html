@@ -3,304 +3,203 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>TradeView</title>
-    <!-- Tailwind CSS -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/tailwindcss/2.2.19/tailwind.min.js"></script>
-    <!-- TradingView Lightweight Charts -->
+    <title>Trading Platform</title>
+    <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/lightweight-charts/3.8.0/lightweight-charts.standalone.production.min.js"></script>
-    <style>
-        body {
-            touch-action: manipulation;
-            overscroll-behavior: none;
-            height: 100vh;
-            width: 100vw;
-            overflow: hidden;
-            background-color: black;
-            color: white;
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
-        }
-        
-        .ticker-slider {
-            overflow-x: auto;
-            white-space: nowrap;
-            scrollbar-width: none;
-            -ms-overflow-style: none;
-        }
-        
-        .ticker-slider::-webkit-scrollbar {
-            display: none;
-        }
-        
-        .chart-container {
-            height: calc(100vh - 260px);
-            width: 100%;
-            position: relative;
-        }
-        
-        .pair-button {
-            background-color: #2b2b2b;
-            border-radius: 8px;
-            padding: 0.5rem 0.75rem;
-            display: inline-flex;
-            align-items: center;
-            font-weight: 500;
-        }
-        
-        .pair-button span.arrow {
-            margin-left: 0.5rem;
-            display: inline-block;
-            width: 0;
-            height: 0;
-            border-left: 5px solid transparent;
-            border-right: 5px solid transparent;
-            border-top: 5px solid #4d9af7;
-        }
-        
-        .bottom-info {
-            border-top: 1px solid #333;
-            padding: 0.75rem 1rem;
-        }
-        
-        .timeframe-button {
-            background-color: transparent;
-            color: #fff;
-            border: none;
-            padding: 0.25rem 0.5rem;
-            margin-right: 0.5rem;
-        }
-        
-        .timeframe-button.active {
-            background-color: #2a2a2a;
-            border-radius: 4px;
-        }
-        
-        .chart-tools {
-            display: flex;
-            background-color: #1b1b1b;
-            padding: 0.5rem;
-            border-bottom: 1px solid #333;
-        }
-        
-        .info-value {
-            font-size: 1.25rem;
-            font-weight: 500;
-        }
-        
-        .info-label {
-            font-size: 0.875rem;
-            color: #9e9e9e;
-        }
-    </style>
 </head>
-<body>
+<body class="bg-black text-white font-sans h-screen overflow-hidden">
     <!-- Заголовок -->
-    <header class="px-4 py-3 flex items-center">
-        <h1 class="text-3xl font-bold">TradeView</h1>
+    <header class="px-4 py-3 flex justify-between items-center border-b border-gray-800">
+        <h1 class="text-lg font-semibold">Trade Platform</h1>
+        <div class="flex gap-2">
+            <button id="symbol-dropdown" class="bg-gray-800 text-sm rounded px-3 py-2 flex items-center gap-1">
+                <span id="current-symbol">BTC/USDT</span>
+                <svg class="w-4 h-4 text-gray-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M19 9l-7 7-7-7"></path>
+                </svg>
+            </button>
+            <button id="interval-dropdown" class="bg-gray-800 text-sm rounded px-3 py-2 flex items-center gap-1">
+                <span id="current-interval">1m</span>
+                <svg class="w-4 h-4 text-gray-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M19 9l-7 7-7-7"></path>
+                </svg>
+            </button>
+        </div>
     </header>
     
-    <!-- Селектор пары и тикеры -->
-    <div class="px-4 pb-2">
-        <div class="flex items-center space-x-2 mb-2">
-            <button id="pair-selector" class="pair-button text-blue-400">
-                BTC/USDT
-                <span class="arrow"></span>
-            </button>
-            <button id="interval-selector" class="pair-button text-blue-400">
-                1m
-                <span class="arrow"></span>
-            </button>
-        </div>
-        
-        <div class="ticker-slider pb-2">
-            <div id="tickers" class="inline-block">
-                <span class="pr-6">BTC/USDT: <span id="btc-price" class="font-medium">--</span></span>
-                <span class="pr-6">ETH/USDT: <span id="eth-price" class="font-medium">--</span></span>
-                <span class="pr-6">BNB/USDT: <span id="bnb-price" class="font-medium">--</span></span>
-                <span class="pr-6">ADA/USDT: <span id="ada-price" class="font-medium">--</span></span>
-                <span class="pr-6">DOGE/USDT: <span id="doge-price" class="font-medium">--</span></span>
-            </div>
-        </div>
-    </div>
-    
-    <!-- Панель инструментов графика -->
-    <div class="chart-tools">
-        <button id="timeframe-1m" class="timeframe-button active">1M</button>
-        <button id="timeframe-5m" class="timeframe-button">5M</button>
-        <button id="timeframe-15m" class="timeframe-button">15M</button>
-        <button id="timeframe-1h" class="timeframe-button">1H</button>
-        <button id="timeframe-4h" class="timeframe-button">4H</button>
-        <button id="timeframe-1d" class="timeframe-button">1D</button>
-        <div class="ml-auto flex items-center">
-            <button id="chart-type" class="mr-4">
-                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                    <path d="M3 3v18h18"></path>
-                    <path d="M7 16h2v-6H7v6zm8 0h2V8h-2v8zm-4 0h2v-2h-2v2z"></path>
-                </svg>
-            </button>
-            <button id="indicators-button">
-                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                    <path d="M2 12h2M7 12h15M8 6h7M5 18h10"></path>
-                </svg>
-            </button>
-        </div>
+    <!-- Тайм-бар -->
+    <div class="flex bg-gray-900 border-b border-gray-800 overflow-x-auto scrollbar-hide">
+        <button class="timeframe-button px-4 py-2 text-sm focus:outline-none active" data-interval="1m">1M</button>
+        <button class="timeframe-button px-4 py-2 text-sm focus:outline-none" data-interval="5m">5M</button>
+        <button class="timeframe-button px-4 py-2 text-sm focus:outline-none" data-interval="15m">15M</button>
+        <button class="timeframe-button px-4 py-2 text-sm focus:outline-none" data-interval="1h">1H</button>
+        <button class="timeframe-button px-4 py-2 text-sm focus:outline-none" data-interval="4h">4H</button>
+        <button class="timeframe-button px-4 py-2 text-sm focus:outline-none" data-interval="1d">1D</button>
     </div>
     
     <!-- График -->
-    <div id="chart-container" class="chart-container"></div>
-    
-    <!-- Информация о цене и объеме -->
-    <div class="bottom-info">
-        <div class="grid grid-cols-3 gap-4">
-            <div>
-                <div class="info-label">Цена</div>
-                <div id="current-price" class="info-value">--.--</div>
-            </div>
-            <div>
-                <div class="info-label">24ч %</div>
-                <div id="price-change" class="info-value">--.--</div>
-            </div>
-            <div>
-                <div class="info-label">Объем 24ч</div>
-                <div id="volume" class="info-value">--.--</div>
-            </div>
+    <div id="chart" class="w-full h-[calc(100vh-142px)] relative">
+        <div id="chart-loader" class="absolute inset-0 flex items-center justify-center bg-black bg-opacity-50">
+            <div class="w-8 h-8 border-4 border-gray-600 border-t-blue-500 rounded-full animate-spin"></div>
         </div>
     </div>
     
-    <!-- Селектор монет (скрытый по умолчанию) -->
-    <div id="pair-dropdown" class="fixed inset-0 z-50 bg-black bg-opacity-80 flex-col items-center justify-center hidden">
-        <div class="bg-gray-900 w-11/12 mx-auto rounded-lg max-h-96 overflow-y-auto">
-            <div class="p-4 border-b border-gray-800 flex justify-between items-center">
+    <!-- Информация о цене -->
+    <div class="grid grid-cols-3 p-3 bg-gray-900 border-t border-gray-800">
+        <div>
+            <div class="text-xs text-gray-400">Цена</div>
+            <div id="price" class="text-base font-medium">--</div>
+        </div>
+        <div>
+            <div class="text-xs text-gray-400">24ч %</div>
+            <div id="change" class="text-base font-medium">--</div>
+        </div>
+        <div>
+            <div class="text-xs text-gray-400">Объем 24ч</div>
+            <div id="volume" class="text-base font-medium">--</div>
+        </div>
+    </div>
+    
+    <!-- Модальные окна -->
+    <div id="symbol-modal" class="fixed inset-0 bg-black bg-opacity-80 z-50 flex-col justify-center items-center hidden">
+        <div class="bg-gray-900 mx-auto mt-16 rounded-lg w-11/12 max-w-md overflow-hidden">
+            <div class="flex justify-between items-center p-4 border-b border-gray-800">
                 <h3 class="text-lg font-medium">Выберите пару</h3>
-                <button id="close-pair-dropdown" class="text-gray-400">✕</button>
+                <button class="modal-close text-gray-400 text-xl">&times;</button>
             </div>
-            <div class="p-2">
-                <div class="grid grid-cols-1 gap-2">
-                    <button class="pair-item text-left p-3 hover:bg-gray-800 rounded" data-symbol="BTCUSDT">BTC/USDT</button>
-                    <button class="pair-item text-left p-3 hover:bg-gray-800 rounded" data-symbol="ETHUSDT">ETH/USDT</button>
-                    <button class="pair-item text-left p-3 hover:bg-gray-800 rounded" data-symbol="BNBUSDT">BNB/USDT</button>
-                    <button class="pair-item text-left p-3 hover:bg-gray-800 rounded" data-symbol="SOLUSDT">SOL/USDT</button>
-                    <button class="pair-item text-left p-3 hover:bg-gray-800 rounded" data-symbol="ADAUSDT">ADA/USDT</button>
-                    <button class="pair-item text-left p-3 hover:bg-gray-800 rounded" data-symbol="DOGEUSDT">DOGE/USDT</button>
-                    <button class="pair-item text-left p-3 hover:bg-gray-800 rounded" data-symbol="XRPUSDT">XRP/USDT</button>
-                </div>
+            <div class="p-2 max-h-96 overflow-y-auto">
+                <button class="pair-item w-full text-left p-3 hover:bg-gray-800 rounded-md mb-1" data-symbol="BTCUSDT">BTC/USDT</button>
+                <button class="pair-item w-full text-left p-3 hover:bg-gray-800 rounded-md mb-1" data-symbol="ETHUSDT">ETH/USDT</button>
+                <button class="pair-item w-full text-left p-3 hover:bg-gray-800 rounded-md mb-1" data-symbol="BNBUSDT">BNB/USDT</button>
+                <button class="pair-item w-full text-left p-3 hover:bg-gray-800 rounded-md mb-1" data-symbol="SOLUSDT">SOL/USDT</button>
+                <button class="pair-item w-full text-left p-3 hover:bg-gray-800 rounded-md mb-1" data-symbol="ADAUSDT">ADA/USDT</button>
+                <button class="pair-item w-full text-left p-3 hover:bg-gray-800 rounded-md mb-1" data-symbol="XRPUSDT">XRP/USDT</button>
+                <button class="pair-item w-full text-left p-3 hover:bg-gray-800 rounded-md mb-1" data-symbol="DOGEUSDT">DOGE/USDT</button>
             </div>
         </div>
     </div>
     
-    <!-- Селектор интервалов (скрытый по умолчанию) -->
-    <div id="interval-dropdown" class="fixed inset-0 z-50 bg-black bg-opacity-80 flex-col items-center justify-center hidden">
-        <div class="bg-gray-900 w-11/12 mx-auto rounded-lg overflow-hidden">
-            <div class="p-4 border-b border-gray-800 flex justify-between items-center">
+    <div id="interval-modal" class="fixed inset-0 bg-black bg-opacity-80 z-50 flex-col justify-center items-center hidden">
+        <div class="bg-gray-900 mx-auto mt-16 rounded-lg w-11/12 max-w-md overflow-hidden">
+            <div class="flex justify-between items-center p-4 border-b border-gray-800">
                 <h3 class="text-lg font-medium">Выберите интервал</h3>
-                <button id="close-interval-dropdown" class="text-gray-400">✕</button>
+                <button class="modal-close text-gray-400 text-xl">&times;</button>
             </div>
             <div class="p-2">
                 <div class="grid grid-cols-2 gap-2">
-                    <button class="interval-item p-3 hover:bg-gray-800 rounded" data-interval="1">1 минута</button>
-                    <button class="interval-item p-3 hover:bg-gray-800 rounded" data-interval="5">5 минут</button>
-                    <button class="interval-item p-3 hover:bg-gray-800 rounded" data-interval="15">15 минут</button>
-                    <button class="interval-item p-3 hover:bg-gray-800 rounded" data-interval="60">1 час</button>
-                    <button class="interval-item p-3 hover:bg-gray-800 rounded" data-interval="240">4 часа</button>
-                    <button class="interval-item p-3 hover:bg-gray-800 rounded" data-interval="D">1 день</button>
+                    <button class="interval-item p-3 hover:bg-gray-800 rounded-md" data-interval="1m">1 минута</button>
+                    <button class="interval-item p-3 hover:bg-gray-800 rounded-md" data-interval="5m">5 минут</button>
+                    <button class="interval-item p-3 hover:bg-gray-800 rounded-md" data-interval="15m">15 минут</button>
+                    <button class="interval-item p-3 hover:bg-gray-800 rounded-md" data-interval="1h">1 час</button>
+                    <button class="interval-item p-3 hover:bg-gray-800 rounded-md" data-interval="4h">4 часа</button>
+                    <button class="interval-item p-3 hover:bg-gray-800 rounded-md" data-interval="1d">1 день</button>
                 </div>
             </div>
         </div>
     </div>
-    
+
     <script>
-        // Глобальные переменные
+        // CSS для активной кнопки таймфрейма
+        document.head.insertAdjacentHTML('beforeend', `
+            <style>
+                .timeframe-button.active {
+                    color: #3b82f6;
+                    position: relative;
+                }
+                .timeframe-button.active::after {
+                    content: '';
+                    position: absolute;
+                    left: 25%;
+                    right: 25%;
+                    bottom: 0;
+                    height: 2px;
+                    background-color: #3b82f6;
+                }
+                .scrollbar-hide::-webkit-scrollbar {
+                    display: none;
+                }
+                .scrollbar-hide {
+                    -ms-overflow-style: none;
+                    scrollbar-width: none;
+                }
+            </style>
+        `);
+
+        // Основные переменные
         let chart;
         let candleSeries;
-        let volumeSeries;
         let currentSymbol = 'BTCUSDT';
-        let currentInterval = '1';
-        let socketTickersList = {};
-        let symbolData = {};
-        
-        // Инициализация при загрузке страницы
+        let currentInterval = '1m';
+        let priceDataBySymbol = {};
+        let socket;
+        let symbolInfoSocket = {};
+
+        // Инициализация при загрузке
         document.addEventListener('DOMContentLoaded', function() {
             initChart();
             setupEventListeners();
-            connectTickerSockets();
             loadHistoricalData();
+            setupTickersSockets();
         });
-        
+
         // Инициализация графика
         function initChart() {
-            const chartContainer = document.getElementById('chart-container');
+            const chartElement = document.getElementById('chart');
             
-            // Создаем график
-            chart = LightweightCharts.createChart(chartContainer, {
-                width: chartContainer.clientWidth,
-                height: chartContainer.clientHeight,
+            chart = LightweightCharts.createChart(chartElement, {
+                width: chartElement.clientWidth,
+                height: chartElement.clientHeight,
                 layout: {
                     backgroundColor: '#000000',
                     textColor: '#d1d4dc',
                 },
                 grid: {
                     vertLines: {
-                        color: 'rgba(42, 46, 57, 0.5)',
+                        color: 'rgba(42, 46, 57, 0.2)',
                     },
                     horzLines: {
-                        color: 'rgba(42, 46, 57, 0.5)',
+                        color: 'rgba(42, 46, 57, 0.2)',
                     },
                 },
                 crosshair: {
                     mode: LightweightCharts.CrosshairMode.Normal,
                 },
-                rightPriceScale: {
-                    borderColor: 'rgba(197, 203, 206, 0.8)',
+                priceScale: {
+                    borderColor: 'rgba(197, 203, 206, 0.3)',
                 },
                 timeScale: {
-                    borderColor: 'rgba(197, 203, 206, 0.8)',
+                    borderColor: 'rgba(197, 203, 206, 0.3)',
                     timeVisible: true,
+                    secondsVisible: false,
+                },
+                handleScale: {
+                    mouseWheel: true,
+                    pinch: true,
+                },
+                handleScroll: {
+                    mouseWheel: true,
+                    pressedMouseMove: true,
+                    horzTouchDrag: true,
+                    vertTouchDrag: true,
                 },
             });
             
-            // Создаем серию свечей
+            // Добавляем свечной график
             candleSeries = chart.addCandlestickSeries({
-                upColor: '#26a69a',
-                downColor: '#ef5350',
-                borderVisible: false,
-                wickUpColor: '#26a69a',
-                wickDownColor: '#ef5350',
+                upColor: '#4caf50',
+                downColor: '#ef4444',
+                borderDownColor: '#ef4444',
+                borderUpColor: '#4caf50',
+                wickDownColor: '#ef4444',
+                wickUpColor: '#4caf50',
             });
             
-            // Добавляем объемы
-            volumeSeries = chart.addHistogramSeries({
-                color: '#26a69a',
-                priceFormat: {
-                    type: 'volume',
-                },
-                priceScaleId: '',
-                scaleMargins: {
-                    top: 0.8,
-                    bottom: 0,
-                },
-            });
-            
-            // Добавим Bollinger Bands (пример индикатора)
-            let upperBandSeries = chart.addLineSeries({
-                color: 'rgba(38, 166, 154, 0.5)',
-                lineWidth: 1,
-            });
-            
-            let middleBandSeries = chart.addLineSeries({
-                color: 'rgba(255, 255, 255, 0.5)',
-                lineWidth: 1,
-            });
-            
-            let lowerBandSeries = chart.addLineSeries({
-                color: 'rgba(239, 83, 80, 0.5)',
-                lineWidth: 1,
-            });
-            
-            // Подгоняем размер при изменении окна
+            // Адаптивность графика при изменении размера окна
             window.addEventListener('resize', () => {
                 if (chart) {
                     chart.resize(
-                        chartContainer.clientWidth,
-                        chartContainer.clientHeight
+                        chartElement.clientWidth,
+                        chartElement.clientHeight
                     );
                 }
             });
@@ -308,360 +207,282 @@
         
         // Настройка обработчиков событий
         function setupEventListeners() {
-            // Обработчик для селектора пары
-            document.getElementById('pair-selector').addEventListener('click', function() {
-                document.getElementById('pair-dropdown').classList.remove('hidden');
-                document.getElementById('pair-dropdown').classList.add('flex');
+            // Открытие селектора символа
+            document.getElementById('symbol-dropdown').addEventListener('click', function() {
+                document.getElementById('symbol-modal').classList.remove('hidden');
+                document.getElementById('symbol-modal').classList.add('flex');
             });
             
-            // Закрытие селектора пары
-            document.getElementById('close-pair-dropdown').addEventListener('click', function() {
-                document.getElementById('pair-dropdown').classList.add('hidden');
-                document.getElementById('pair-dropdown').classList.remove('flex');
+            // Открытие селектора интервала
+            document.getElementById('interval-dropdown').addEventListener('click', function() {
+                document.getElementById('interval-modal').classList.remove('hidden');
+                document.getElementById('interval-modal').classList.add('flex');
             });
             
-            // Обработчик для выбора пары
+            // Закрытие модальных окон
+            document.querySelectorAll('.modal-close').forEach(button => {
+                button.addEventListener('click', function() {
+                    this.closest('[id$="-modal"]').classList.add('hidden');
+                    this.closest('[id$="-modal"]').classList.remove('flex');
+                });
+            });
+            
+            // Выбор символа
             document.querySelectorAll('.pair-item').forEach(item => {
                 item.addEventListener('click', function() {
                     const symbol = this.getAttribute('data-symbol');
                     const displaySymbol = symbol.replace('USDT', '/USDT');
-                    document.getElementById('pair-selector').textContent = displaySymbol;
                     
-                    document.getElementById('pair-dropdown').classList.add('hidden');
-                    document.getElementById('pair-dropdown').classList.remove('flex');
+                    document.getElementById('current-symbol').textContent = displaySymbol;
+                    document.getElementById('symbol-modal').classList.add('hidden');
+                    document.getElementById('symbol-modal').classList.remove('flex');
                     
-                    currentSymbol = symbol;
-                    resetChart();
-                    loadHistoricalData();
+                    if (currentSymbol !== symbol) {
+                        currentSymbol = symbol;
+                        document.getElementById('chart-loader').classList.remove('hidden');
+                        loadHistoricalData();
+                    }
                 });
             });
             
-            // Обработчик для селектора интервала
-            document.getElementById('interval-selector').addEventListener('click', function() {
-                document.getElementById('interval-dropdown').classList.remove('hidden');
-                document.getElementById('interval-dropdown').classList.add('flex');
-            });
-            
-            // Закрытие селектора интервала
-            document.getElementById('close-interval-dropdown').addEventListener('click', function() {
-                document.getElementById('interval-dropdown').classList.add('hidden');
-                document.getElementById('interval-dropdown').classList.remove('flex');
-            });
-            
-            // Обработчик для выбора интервала
+            // Выбор интервала из модального окна
             document.querySelectorAll('.interval-item').forEach(item => {
                 item.addEventListener('click', function() {
                     const interval = this.getAttribute('data-interval');
-                    let displayInterval;
                     
-                    switch(interval) {
-                        case '1': displayInterval = '1m'; break;
-                        case '5': displayInterval = '5m'; break;
-                        case '15': displayInterval = '15m'; break;
-                        case '60': displayInterval = '1h'; break;
-                        case '240': displayInterval = '4h'; break;
-                        case 'D': displayInterval = '1d'; break;
-                        default: displayInterval = '1m';
+                    document.getElementById('current-interval').textContent = interval;
+                    document.getElementById('interval-modal').classList.add('hidden');
+                    document.getElementById('interval-modal').classList.remove('flex');
+                    
+                    if (currentInterval !== interval) {
+                        currentInterval = interval;
+                        
+                        // Обновить активную кнопку на таймфрейм баре
+                        document.querySelectorAll('.timeframe-button').forEach(button => {
+                            if (button.getAttribute('data-interval') === interval) {
+                                button.classList.add('active');
+                            } else {
+                                button.classList.remove('active');
+                            }
+                        });
+                        
+                        document.getElementById('chart-loader').classList.remove('hidden');
+                        loadHistoricalData();
                     }
-                    
-                    document.getElementById('interval-selector').textContent = displayInterval;
-                    
-                    document.getElementById('interval-dropdown').classList.add('hidden');
-                    document.getElementById('interval-dropdown').classList.remove('flex');
-                    
-                    // Обновляем активную кнопку timeframe
-                    document.querySelectorAll('.timeframe-button').forEach(btn => {
-                        btn.classList.remove('active');
-                    });
-                    
-                    const timeframeButton = document.getElementById(`timeframe-${displayInterval}`);
-                    if (timeframeButton) {
-                        timeframeButton.classList.add('active');
-                    }
-                    
-                    currentInterval = interval;
-                    resetChart();
-                    loadHistoricalData();
                 });
             });
             
-            // Обработчики для кнопок timeframe
+            // Выбор интервала на таймфрейм баре
             document.querySelectorAll('.timeframe-button').forEach(button => {
                 button.addEventListener('click', function() {
-                    // Сначала удаляем класс active у всех кнопок
+                    const interval = this.getAttribute('data-interval');
+                    
                     document.querySelectorAll('.timeframe-button').forEach(btn => {
                         btn.classList.remove('active');
                     });
                     
-                    // Добавляем класс active к нажатой кнопке
                     this.classList.add('active');
+                    document.getElementById('current-interval').textContent = interval;
                     
-                    // Извлекаем интервал из ID кнопки
-                    const timeframeId = this.id.replace('timeframe-', '');
-                    let interval;
-                    
-                    switch(timeframeId) {
-                        case '1m': interval = '1'; break;
-                        case '5m': interval = '5'; break;
-                        case '15m': interval = '15'; break;
-                        case '1h': interval = '60'; break;
-                        case '4h': interval = '240'; break;
-                        case '1d': interval = 'D'; break;
-                        default: interval = '1';
+                    if (currentInterval !== interval) {
+                        currentInterval = interval;
+                        document.getElementById('chart-loader').classList.remove('hidden');
+                        loadHistoricalData();
                     }
-                    
-                    // Обновляем текст в селекторе интервала
-                    document.getElementById('interval-selector').textContent = timeframeId;
-                    
-                    // Обновляем текущий интервал и перезагружаем график
-                    currentInterval = interval;
-                    resetChart();
-                    loadHistoricalData();
                 });
             });
-        }
-        
-        // Подключение сокетов для тикеров
-        function connectTickerSockets() {
-            const symbols = ['btcusdt', 'ethusdt', 'bnbusdt', 'solusdt', 'adausdt', 'dogeusdt'];
             
-            symbols.forEach(symbol => {
-                const ws = new WebSocket(`wss://stream.binance.com:9443/ws/${symbol}@ticker`);
-                
-                ws.onmessage = function(event) {
-                    const data = JSON.parse(event.data);
-                    const price = parseFloat(data.c).toFixed(symbol.includes('btc') ? 2 : (symbol.includes('eth') || symbol.includes('bnb') ? 2 : 4));
-                    const priceChange = parseFloat(data.P);
-                    
-                    // Обновление цены в бегущей строке
-                    const symbolShort = symbol.replace('usdt', '');
-                    const priceElement = document.getElementById(`${symbolShort}-price`);
-                    if (priceElement) {
-                        priceElement.textContent = price;
-                        priceElement.className = priceChange >= 0 ? 'font-medium text-green-500' : 'font-medium text-red-500';
+            // Закрытие модальных окон по клику вне них
+            document.querySelectorAll('[id$="-modal"]').forEach(modal => {
+                modal.addEventListener('click', function(e) {
+                    if (e.target === this) {
+                        this.classList.add('hidden');
+                        this.classList.remove('flex');
                     }
-                    
-                    // Сохраняем данные символа
-                    symbolData[symbol] = {
-                        price: price,
-                        priceChange: priceChange,
-                        volume: parseFloat(data.v)
-                    };
-                    
-                    // Если это текущий символ, обновляем информацию
-                    if (symbol.toUpperCase() === currentSymbol) {
-                        updatePriceInfo();
-                    }
-                };
-                
-                ws.onerror = function(error) {
-                    console.error(`WebSocket error for ${symbol}:`, error);
-                };
-                
-                socketTickersList[symbol] = ws;
+                });
             });
         }
         
         // Загрузка исторических данных
         function loadHistoricalData() {
-            // Преобразуем интервал для API Binance
             const binanceInterval = convertToBinanceInterval(currentInterval);
             
-            fetch(`https://api.binance.com/api/v3/klines?symbol=${currentSymbol}&interval=${binanceInterval}&limit=300`)
+            fetch(`https://api.binance.com/api/v3/klines?symbol=${currentSymbol}&interval=${binanceInterval}&limit=500`)
                 .then(response => response.json())
                 .then(data => {
-                    const candles = [];
-                    const volumes = [];
-                    
-                    // Рассчитаем BB (простой пример, в реальности нужен более сложный расчет)
-                    const closePrices = data.map(d => parseFloat(d[4]));
-                    const bbandsResult = calculateBollingerBands(closePrices, 20, 2);
-                    
-                    for (let i = 0; i < data.length; i++) {
-                        const time = data[i][0] / 1000;
-                        
-                        candles.push({
-                            time: time,
-                            open: parseFloat(data[i][1]),
-                            high: parseFloat(data[i][2]),
-                            low: parseFloat(data[i][3]),
-                            close: parseFloat(data[i][4])
-                        });
-                        
-                        volumes.push({
-                            time: time,
-                            value: parseFloat(data[i][5]),
-                            color: parseFloat(data[i][4]) >= parseFloat(data[i][1]) ? 'rgba(38, 166, 154, 0.5)' : 'rgba(239, 83, 80, 0.5)'
-                        });
-                    }
+                    const formattedData = data.map(item => ({
+                        time: item[0] / 1000,
+                        open: parseFloat(item[1]),
+                        high: parseFloat(item[2]),
+                        low: parseFloat(item[3]),
+                        close: parseFloat(item[4]),
+                        volume: parseFloat(item[5])
+                    }));
                     
                     // Устанавливаем данные на график
-                    candleSeries.setData(candles);
-                    volumeSeries.setData(volumes);
+                    candleSeries.setData(formattedData);
+                    
+                    // Подписываемся на обновления в реальном времени
+                    subscribeToRealtimeUpdates();
                     
                     // Обновляем информацию о цене
-                    if (candles.length > 0) {
-                        const currentPrice = candles[candles.length - 1].close;
-                        const startPrice = candles[0].close;
-                        updatePriceInfo(currentPrice, startPrice, parseFloat(data[data.length - 1][5]));
+                    if (formattedData.length > 0) {
+                        const latestCandle = formattedData[formattedData.length - 1];
+                        updatePriceInfo(latestCandle.close);
                     }
                     
-                    // Подключаем основной сокет для обновления графика
-                    connectMainSocket(binanceInterval);
+                    // Скрыть лоадер
+                    document.getElementById('chart-loader').classList.add('hidden');
                 })
                 .catch(error => {
                     console.error('Error loading historical data:', error);
+                    document.getElementById('chart-loader').classList.add('hidden');
                 });
         }
         
-        // Подключение основного сокета для обновления графика
-        function connectMainSocket(interval) {
-            const symbol = currentSymbol.toLowerCase();
-            
-            // Закрываем предыдущий сокет, если он существует
-            if (window.mainSocket && window.mainSocket.readyState === WebSocket.OPEN) {
-                window.mainSocket.close();
+        // Подписка на обновления в реальном времени
+        function subscribeToRealtimeUpdates() {
+            // Закрываем предыдущее соединение, если оно открыто
+            if (socket && socket.readyState === WebSocket.OPEN) {
+                socket.close();
             }
             
-            const wsUrl = `wss://stream.binance.com:9443/ws/${symbol}@kline_${interval}`;
+            const binanceInterval = convertToBinanceInterval(currentInterval);
+            const wsUrl = `wss://stream.binance.com:9443/ws/${currentSymbol.toLowerCase()}@kline_${binanceInterval}`;
             
-            window.mainSocket = new WebSocket(wsUrl);
+            socket = new WebSocket(wsUrl);
             
-            window.mainSocket.onmessage = function(event) {
+            socket.onopen = function() {
+                console.log('WebSocket connection established');
+            };
+            
+            socket.onmessage = function(event) {
                 const data = JSON.parse(event.data);
+                
                 if (data.k) {
                     const candle = {
                         time: data.k.t / 1000,
                         open: parseFloat(data.k.o),
                         high: parseFloat(data.k.h),
                         low: parseFloat(data.k.l),
-                        close: parseFloat(data.k.c)
+                        close: parseFloat(data.k.c),
+                        volume: parseFloat(data.k.v)
                     };
                     
-                    const volume = {
-                        time: data.k.t / 1000,
-                        value: parseFloat(data.k.v),
-                        color: parseFloat(data.k.c) >= parseFloat(data.k.o) ? 'rgba(38, 166, 154, 0.5)' : 'rgba(239, 83, 80, 0.5)'
-                    };
-                    
+                    // Обновляем свечу на графике
                     candleSeries.update(candle);
-                    volumeSeries.update(volume);
                     
                     // Обновляем информацию о цене
-                    updatePriceInfo(candle.close, null, parseFloat(data.k.v));
+                    updatePriceInfo(candle.close);
                 }
             };
             
-            window.mainSocket.onerror = function(error) {
-                console.error('Main WebSocket error:', error);
+            socket.onerror = function(error) {
+                console.error('WebSocket error:', error);
+            };
+            
+            socket.onclose = function() {
+                console.log('WebSocket connection closed');
             };
         }
         
-        // Преобразование интервала для API Binance
+        // Настройка сокетов для получения информации о символах
+        function setupTickersSockets() {
+            const symbols = ['btcusdt', 'ethusdt', 'bnbusdt', 'solusdt', 'adausdt', 'xrpusdt', 'dogeusdt'];
+            
+            symbols.forEach(symbol => {
+                const ticker = new WebSocket(`wss://stream.binance.com:9443/ws/${symbol}@ticker`);
+                
+                ticker.onmessage = function(event) {
+                    const data = JSON.parse(event.data);
+                    const upperSymbol = symbol.toUpperCase();
+                    
+                    priceDataBySymbol[upperSymbol] = {
+                        price: parseFloat(data.c),
+                        change: parseFloat(data.P),
+                        volume: parseFloat(data.v)
+                    };
+                    
+                    // Если это текущий выбранный символ, обновляем информацию
+                    if (upperSymbol === currentSymbol) {
+                        updateTickerInfo();
+                    }
+                };
+                
+                symbolInfoSocket[symbol] = ticker;
+            });
+        }
+        
+        // Обновление информации о цене
+        function updatePriceInfo(price) {
+            document.getElementById('price').textContent = price.toFixed(price >= 1000 ? 2 : (price >= 1 ? 3 : 6));
+        }
+        
+        // Обновление информации о тикере
+        function updateTickerInfo() {
+            const data = priceDataBySymbol[currentSymbol];
+            
+            if (!data) return;
+            
+            const priceElement = document.getElementById('price');
+            const changeElement = document.getElementById('change');
+            const volumeElement = document.getElementById('volume');
+            
+            // Обновляем цену
+            priceElement.textContent = data.price.toFixed(data.price >= 1000 ? 2 : (data.price >= 1 ? 3 : 6));
+            
+            // Обновляем изменение
+            const change = data.change;
+            changeElement.textContent = (change >= 0 ? '+' : '') + change.toFixed(2) + '%';
+            
+            if (change >= 0) {
+                changeElement.className = 'text-base font-medium text-green-500';
+            } else {
+                changeElement.className = 'text-base font-medium text-red-500';
+            }
+            
+            // Обновляем объем
+            const volume = data.volume;
+            let formattedVolume;
+            
+            if (volume >= 1000000000) {
+                formattedVolume = (volume / 1000000000).toFixed(2) + ' B';
+            } else if (volume >= 1000000) {
+                formattedVolume = (volume / 1000000).toFixed(2) + ' M';
+            } else if (volume >= 1000) {
+                formattedVolume = (volume / 1000).toFixed(2) + ' K';
+            } else {
+                formattedVolume = volume.toFixed(2);
+            }
+            
+            volumeElement.textContent = formattedVolume;
+        }
+        
+        // Преобразование интервала в формат Binance API
         function convertToBinanceInterval(interval) {
             switch (interval) {
-                case '1': return '1m';
-                case '5': return '5m';
-                case '15': return '15m';
-                case '60': return '1h';
-                case '240': return '4h';
-                case 'D': return '1d';
+                case '1m': return '1m';
+                case '5m': return '5m';
+                case '15m': return '15m';
+                case '1h': return '1h';
+                case '4h': return '4h';
+                case '1d': return '1d';
                 default: return '1m';
             }
         }
         
-        // Обновление информации о цене
-        function updatePriceInfo(currentPrice, startPrice = null, volume = null) {
-            // Устанавливаем текущую цену
-            document.getElementById('current-price').textContent = currentPrice.toFixed(2);
-            
-            // Обновляем информацию из сохраненных данных
-            const symbol = currentSymbol.toLowerCase();
-            if (symbolData[symbol]) {
-                const data = symbolData[symbol];
-                
-                // Обновление изменения цены
-                const priceChangeElem = document.getElementById('price-change');
-                const priceChange = data.priceChange;
-                priceChangeElem.textContent = priceChange.toFixed(2) + '%';
-                
-                if (priceChange >= 0) {
-                    priceChangeElem.className = 'info-value text-green-500';
-                } else {
-                    priceChangeElem.className = 'info-value text-red-500';
-                }
-                
-                // Обновление объема
-                formatVolume(data.volume);
-            }
-        }
-        
-        // Форматирование объема
-        function formatVolume(volume) {
-            let volumeText = '';
-            
-            if (volume > 1000000000) {
-                volumeText = (volume / 1000000000).toFixed(2) + 'B';
-            } else if (volume > 1000000) {
-                volumeText = (volume / 1000000).toFixed(2) + 'M';
-            } else if (volume > 1000) {
-                volumeText = (volume / 1000).toFixed(2) + 'K';
-            } else {
-                volumeText = volume.toFixed(2);
-            }
-            
-            document.getElementById('volume').textContent = volumeText;
-        }
-        
-        // Сброс графика
-        function resetChart() {
-            candleSeries.setData([]);
-            volumeSeries.setData([]);
-        }
-        
-        // Расчет полос Боллинджера (упрощенная версия)
-        function calculateBollingerBands(prices, period = 20, multiplier = 2) {
-            const result = {
-                upper: [],
-                middle: [],
-                lower: []
-            };
-            
-            if (prices.length < period) {
-                return result;
-            }
-            
-            for (let i = period - 1; i < prices.length; i++) {
-                const slice = prices.slice(i - period + 1, i + 1);
-                const sum = slice.reduce((a, b) => a + b, 0);
-                const sma = sum / period;
-                
-                // Расчет среднеквадратичного отклонения
-                let squaredDifferencesSum = 0;
-                for (const price of slice) {
-                    squaredDifferencesSum += Math.pow(price - sma, 2);
-                }
-                const stdDev = Math.sqrt(squaredDifferencesSum / period);
-                
-                result.middle.push({ time: i, value: sma });
-                result.upper.push({ time: i, value: sma + multiplier * stdDev });
-                result.lower.push({ time: i, value: sma - multiplier * stdDev });
-            }
-            
-            return result;
-        }
-        
         // Очистка ресурсов при закрытии страницы
         window.addEventListener('beforeunload', function() {
-            // Закрыть все WebSocket соединения
-            for (let symbol in socketTickersList) {
-                if (socketTickersList[symbol] && socketTickersList[symbol].readyState === WebSocket.OPEN) {
-                    socketTickersList[symbol].close();
-                }
+            // Закрываем основной сокет
+            if (socket && socket.readyState === WebSocket.OPEN) {
+                socket.close();
             }
             
-            if (window.mainSocket && window.mainSocket.readyState === WebSocket.OPEN) {
-                window.mainSocket.close();
+            // Закрываем сокеты информации о символах
+            for (const symbol in symbolInfoSocket) {
+                if (symbolInfoSocket[symbol] && symbolInfoSocket[symbol].readyState === WebSocket.OPEN) {
+                    symbolInfoSocket[symbol].close();
+                }
             }
         });
     </script>
